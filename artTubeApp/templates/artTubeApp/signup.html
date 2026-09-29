@@ -1,0 +1,16 @@
+<html>
+<head>
+    <title>ArtTube</title>
+</head>
+
+<body>
+    <h2>Sign Up</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        {{ form.confirm_pwd.errors }}
+        <input type="hidden" name="next" value="{{ request.GET.next }}">
+        <button type="Submit">Create Account</button>
+    </form>
+</body>
+</html>

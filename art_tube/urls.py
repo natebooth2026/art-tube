@@ -21,5 +21,8 @@ from artTubeApp import views
 urlpatterns = [
     path('', views.landing, name='home'),
     path('login/', views.login, name='login'),
-    path('request/', views.submit_request_page, name='request')
+    path('signup/', views.signup, name='signup'),
+    path('request/', views.submit_request_page, name='request'),
+    path('studio/', views.creator_studio, name='studio'),
+    path('employee/', views.emp_dashboard, name='employee')
 ]
