@@ -9,12 +9,12 @@ from django.db import models
 
 
 class Admin(models.Model):
-    email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
+    email = models.OneToOneField('User', models.DO_NOTHING, db_column='email')
     employee = models.ForeignKey('Employee', models.DO_NOTHING)
-    secure_q1 = models.CharField(max_length=30)
-    secure_q2 = models.CharField(max_length=30)
-    secure_a1 = models.CharField(max_length=30)
-    secure_a2 = models.CharField(max_length=30)
+    secure_q1 = models.CharField(max_length=255)
+    secure_q2 = models.CharField(max_length=255)
+    secure_a1 = models.CharField(max_length=255)
+    secure_a2 = models.CharField(max_length=255)
 
     class Meta:
         managed = False
@@ -52,8 +52,8 @@ class DjangoMigrations(models.Model):
 
 
 class Employee(models.Model):
-    email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
-    employee_id = models.CharField(primary_key=True, max_length=30)
+    email = models.OneToOneField('User', models.DO_NOTHING, db_column='email')
+    employee_id = models.AutoField(primary_key=True)
     can_approve_req = models.IntegerField()
 
     class Meta:
@@ -64,7 +64,7 @@ class Employee(models.Model):
 class Log(models.Model):
     time = models.DateTimeField()
     ip = models.CharField(max_length=45)
-    action = models.CharField(unique=True, max_length=255)
+    action = models.CharField(max_length=255)
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:
@@ -73,15 +73,15 @@ class Log(models.Model):
 
 
 class Request(models.Model):
-    username = models.ForeignKey('User', models.DO_NOTHING, db_column='username', to_field='username')
+    email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
     img = models.TextField()
-    img_type = models.CharField(unique=True, max_length=30)
-    img_title = models.CharField(unique=True, max_length=30)
-    img_desc = models.CharField(unique=True, max_length=30)
+    img_type = models.CharField(max_length=255)
+    img_title = models.CharField(max_length=255)
+    img_desc = models.CharField(max_length=255)
     img_category = models.ForeignKey(Category, models.DO_NOTHING, db_column='img_category')
-    admin_approve = models.ForeignKey('User', models.DO_NOTHING, db_column='admin_approve', to_field='admin_approve', related_name='request_admin_approve_set')
+    admin_approve = models.IntegerField()
     denied = models.IntegerField()
-    denial_reason = models.CharField(max_length=100, blank=True, null=True)
+    denial_reason = models.CharField(max_length=255, blank=True, null=True)
     time = models.DateTimeField()
 
     class Meta:
@@ -90,11 +90,12 @@ class Request(models.Model):
 
 
 class Submissions(models.Model):
-    username = models.ForeignKey('User', models.DO_NOTHING, db_column='username', to_field='username')
+    email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
     approval_emp = models.ForeignKey(Employee, models.DO_NOTHING)
     img = models.TextField()
-    img_title = models.ForeignKey(Request, models.DO_NOTHING, db_column='img_title', to_field='img_title')
-    img_desc = models.ForeignKey(Request, models.DO_NOTHING, db_column='img_desc', to_field='img_desc', related_name='submissions_img_desc_set')
+    img_type = models.CharField(max_length=255)
+    img_title = models.CharField(max_length=255)
+    img_desc = models.CharField(max_length=255)
     approved_category = models.ForeignKey(Category, models.DO_NOTHING, db_column='approved_category')
 
     class Meta:
@@ -103,11 +104,12 @@ class Submissions(models.Model):
 
 
 class User(models.Model):
-    username = models.CharField(unique=True, max_length=30)
-    password = models.CharField(max_length=30)
-    email = models.CharField(primary_key=True, max_length=30)
-    admin_approve = models.IntegerField(unique=True)
+    username = models.CharField(unique=True, max_length=255)
+    password = models.CharField(max_length=255)
+    email = models.CharField(primary_key=True, max_length=255)
+    admin_approve = models.IntegerField()
     locked = models.IntegerField()
+    number_2fa = models.IntegerField(db_column='2FA')  # Field name made lowercase. Field renamed because it wasn't a valid Python identifier.
 
     class Meta:
         managed = False

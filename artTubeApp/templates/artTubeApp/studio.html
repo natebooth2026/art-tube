@@ -1,0 +1,22 @@
+<html>
+    <head>
+        <title>ArtTube Canvas</title>
+    </head>
+    <body>
+        <h1>ArtTube Canvas</h1>
+        <h3>Welcome to The World's Canvas!</h3>
+        <a href="{% url 'home' %}"><Button>Go Home</Button></a>
+        <br /><br /><br /><br />
+        <b>Pending Requests:</b>
+        <br /><br />
+        {{ requests }}
+        <br /><br />
+        <button>Submit New Request</button><button>See Denied Requests</button>
+        <br /> <br /> <br />
+        <b>Public Pieces:</b>
+        <br /><br />
+        {{ pub_pieces }}
+        <br /><br />
+        <button>Click Here to Take Down a Piece</button>
+    </body>
+</html>
