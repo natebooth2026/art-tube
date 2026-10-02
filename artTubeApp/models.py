@@ -74,7 +74,7 @@ class Log(models.Model):
 
 class Request(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
-    img = models.TextField()
+    img = models.BinaryField()
     img_type = models.CharField(max_length=255)
     img_title = models.CharField(max_length=255)
     img_desc = models.CharField(max_length=255)
@@ -92,7 +92,7 @@ class Request(models.Model):
 class Submissions(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
     approval_emp = models.ForeignKey(Employee, models.DO_NOTHING)
-    img = models.TextField()
+    img = models.BinaryField()
     img_type = models.CharField(max_length=255)
     img_title = models.CharField(max_length=255)
     img_desc = models.CharField(max_length=255)
