@@ -26,5 +26,7 @@ urlpatterns = [
     path('request/', views.submit_request_page, name='request'),
     path('canvas/', views.studio_page, name='studio'),
     path('employee/', views.emp_dashboard, name='employee'),
-    path('admin/', views.admin_dashboard, name='admin')
+    path('admin/', views.admin_dashboard, name='admin'),
+    path('gallery/', views.gallery, name='gallery'),
 ]
+

@@ -3,7 +3,9 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from .forms import account_creation, account_validate
-from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request
+from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions
+
+import base64
 
 # Create your views here.
 
@@ -100,3 +102,21 @@ def studio_page(request):
 
 def creator_studio(request):
     print("null")
+
+def gallery(request):
+    if request.method == 'GET':
+        submissions = list(_Submissions.objects.values(
+            "img",
+            "img_type",
+            "img_title",
+            "img_desc",
+        ))
+
+        #convert LONGBLOB to image
+        for submission in submissions:
+            binary_image = base64.b64encode(submission["img"]).decode("ascii")
+            submission["img"] = (
+                f"data:{submission['img_type']};base64,{binary_image}"
+            )
+        
+        return render(request, 'artTubeApp/gallery.html', {'submissions': submissions})
