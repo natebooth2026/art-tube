@@ -1,0 +1,9 @@
+.piece {
+    display: inline-block;
+    vertical-align: auto;
+    margin-right: 5px;
+    border: 2px;
+    border-style:dashed;
+    padding: 10px;
+    border-color: black;
+}

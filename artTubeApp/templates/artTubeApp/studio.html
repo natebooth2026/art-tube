@@ -1,6 +1,8 @@
+{% load static %}
 <html>
     <head>
         <title>ArtTube Canvas</title>
+        <link rel="stylesheet" href="{% static 'canvas.css' %}"
     </head>
     <body>
         <h1>ArtTube Canvas</h1>
@@ -9,13 +11,33 @@
         <br /><br /><br /><br />
         <b>Pending Requests:</b>
         <br /><br />
-        {{ requests }}
+        {% if request_len > 0 %}
+            {% for r in requests %}
+                {% if r.denied == 0 %}
+                    <div class="piece">
+                        <a href="{% url 'studio_req_view' r.id %}"><img src="data:image/*; base64,{{ r.img_b64 }}" alt="{{ r.img_title }}" style="max-width: 200px;"></a>
+                        <p class="studio_item_title">Title: {{ r.img_title }}</p>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <i>No requests pending...</i>
+        {% endif %}
         <br /><br />
         <button>Submit New Request</button><button>See Denied Requests</button>
         <br /> <br /> <br />
-        <b>Public Pieces:</b>
+        <b>Approved Pieces:</b>
         <br /><br />
-        {{ pub_pieces }}
+        {% if pub_len > 0 %}
+            {% for p in pub_imgs %}
+                <div class="piece">
+                    <a href="{% url 'studio_sub_view' p.id %}"><img src="data:image/*; base64,{{ p.img_b64 }}" alt="{{ p.img_title }}" style="max-width: 200px;"></a>
+                    <p class="studio_item_title">Title: {{ p.img_title }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <i>No pieces found...request a submission today!</i>
+        {% endif %}
         <br /><br />
         <button>Click Here to Take Down a Piece</button>
     </body>

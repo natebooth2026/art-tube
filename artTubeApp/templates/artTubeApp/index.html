@@ -4,16 +4,16 @@
     </head>
     <body>
         <h1>ArtTube</h1>
-        <br />
-        <a href="{% url 'studio' %}"><button>Creator Studio</button></a>
+        <a href="{% url 'studio' %}"><button>Creator Canvas</button></a>
         <a href="{% url 'employee' %}"><button>Employee Dashboard</button></a>
         <a href="{% url 'admin' %}"><button>Admin Portal</button></a>
-        <br />
-        <p>Welcome to ArtTube!</p>
         {% if not request.session.current_user %}
-            <a href="{% url 'login' %}"><button>Login</button></a><a href="{% url 'signup' %}"><button>Sign Up</button></a>
+            <a href="{% url 'login' %}"><button>Login</button></a>
+            <a href="{% url 'signup' %}"><button>Sign Up</button></a>
         {% else %}
             <a href="{% url 'logout' %}"><button>Log Out</button></a>
         {% endif %}
+        <br />
+        <p>Welcome to ArtTube!</p>
     </body>
 </html>
