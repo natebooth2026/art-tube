@@ -1,9 +1,10 @@
-from django.shortcuts import render, redirect
+from base64 import b64encode #for image decoding
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from .forms import account_creation, account_validate
-from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions
+from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category
 
 import base64
 
@@ -89,16 +90,35 @@ def submit_request_page(request):
 def studio_page(request):
     if request.session.get('current_user'):
         _email = request.session.get('current_user')
-        if _Request.objects.filter(email=_email):
-            requests = _Request.objects.get(email=_email)
-            imgs = [r.img for r in requests]
+        if _Request.objects.filter(email=_email).exists():
+            imgs = _Request.objects.filter(email=_email)
+            img_categories = [_Category.objects.get(id=i.img_category.id).name for i in imgs]
         else:
             imgs = []
-        if len(imgs) == 0:
-            imgs = "No requests pending..."
-        return render(request, 'artTubeApp/studio.html', {'requests': imgs})
+
+        if _Submissions.objects.filter(email=_email).exists():
+            sub_imgs = _Submissions.objects.filter(email=_email)
+            sub_img_categories = [_Category.objects.get(id=s.approved_category.id).name for s in sub_imgs]
+        else:
+            sub_imgs = []
+            sub_img_categories = []
+
+        return render(request, 'artTubeApp/studio.html', {'requests': imgs, 'request_len': len(imgs), 'request_cat': img_categories, 
+                                                          'pub_pieces': sub_imgs, 'pub_len': len(sub_imgs), 'pub_cat': sub_img_categories})
     else:
         return redirect('/login?next=/canvas/')
+
+def request_view(request, id = -1):
+    if id < 0 or not _Request.objects.filter(id=id).exists():
+        return redirect('studio')
+    else:
+        return render(request, 'artTubeApp/studio_view.html', {'is_sub': False, 'item': _Request.objects.get(id=id), 'category': _Request.objects.get(id=id).img_category.name})
+
+def sub_view(request, id = -1):
+    if id < 0 or not _Submissions.objects.filter(id=id).exists():
+        return redirect('studio')
+    else:
+        return render(request, 'artTubeApp/studio_view.html', {'is_sub': True, 'item': _Submissions.objects.get(id=id)})
 
 def creator_studio(request):
     print("null")

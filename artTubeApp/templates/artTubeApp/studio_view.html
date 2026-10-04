@@ -1,0 +1,36 @@
+<html>
+    <head>
+        <title>ArtTube Canvas</title>
+    </head>
+    <body>
+        <h1>ArtTube Canvas</h1>
+        <a href="{% url 'studio' %}"><button>Go Back</button></a>
+        {% if not is_sub %}
+            <h3>Request View</h3>
+        {% else %}
+            <h3>Submission View</h3>
+        {% endif %}
+        <br />
+        <div class="view_item">
+            <img src="data:image/*; base64,{{ item.img_b64 }}" alt="{{ view_item.img_title }}" style="max-width: 200px;">
+            <p>Title: {{ item.img_title }}</p>
+            {% if item.img_desc != "" %}
+                <p>Description: {{ item.img_desc }}</p>
+            {% else %}
+                <p><i>No description</i></p>
+            {% endif %}
+            <p>Type: {{ item.img_type }}</p>
+            <p>Category: {{ category }}</p>
+            {% if not is_sub %}
+                {% if item.denied == 0 %}
+                    <p>Request is pending...</p>
+                {% else %}
+                    <p>Request was denied.</p>
+                    {% if item.denial_reason %}
+                        <p>Reason: {{ item.denial_reason }}</p>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+        </div>
+    </body>
+</html>
