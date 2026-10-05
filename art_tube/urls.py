@@ -28,5 +28,7 @@ urlpatterns = [
     path('canvas/request/<int:id>', views.request_view, name='studio_req_view'),
     path('canvas/submission/<int:id>', views.sub_view, name='studio_sub_view'),
     path('employee/', views.emp_dashboard, name='employee'),
-    path('admin/', views.admin_dashboard, name='admin')
+    path('admin/', views.admin_dashboard, name='admin'),
+    path('gallery/', views.gallery, name='gallery'),
 ]
+
