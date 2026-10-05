@@ -1,0 +1,45 @@
+<html>
+    <head>
+        <title>ArtTube Canvas</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Workbench&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <div class="mx-auto p-2" style="width: 200px; font-family: Workbench, sans-serif;">
+            <h1 style="font-size: 3rem;">ArtTube</h1>
+        </div>
+        {% include 'artTubeApp/navbar.html' %}
+        <hr>
+        <h1>ArtTube Canvas</h1>
+        <a href="{% url 'studio' %}"><button>Go Back</button></a>
+        {% if not is_sub %}
+            <h3>Request View</h3>
+        {% else %}
+            <h3>Submission View</h3>
+        {% endif %}
+        <br />
+        <div class="view_item">
+            <img src="data:image/*; base64,{{ item.img_b64 }}" alt="{{ view_item.img_title }}" style="max-width: 200px;">
+            <p>Title: {{ item.img_title }}</p>
+            {% if item.img_desc != "" %}
+                <p>Description: {{ item.img_desc }}</p>
+            {% else %}
+                <p><i>No description</i></p>
+            {% endif %}
+            <p>Type: {{ item.img_type }}</p>
+            <p>Category: {{ category }}</p>
+            {% if not is_sub %}
+                {% if item.denied == 0 %}
+                    <p>Request is pending...</p>
+                {% else %}
+                    <p>Request was denied.</p>
+                    {% if item.denial_reason %}
+                        <p>Reason: {{ item.denial_reason }}</p>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+        </div>
+    </body>
+</html>
