@@ -30,3 +30,8 @@ class Sub_Request_Form(forms.Form):
         empty_label="Intended Category...",
         label = "Category"
     )
+
+class add_event(forms.Form):
+    event_title = forms.CharField(max_length=30)
+    event_start = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), label="Start Date and Time")
+    event_end = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), label="End Date and Time")

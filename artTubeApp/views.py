@@ -3,8 +3,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils.http import url_has_allowed_host_and_scheme
 
-from .forms import account_creation, account_validate
-from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category
+from .forms import account_creation, account_validate, add_event
+from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
 
 import base64
 
@@ -71,7 +71,42 @@ def signup(request):
 
 def emp_dashboard(request):
     if request.session.get('current_user'):
-        return render(request, 'artTubeApp/emp_dash.html')
+        _email = request.session.get('current_user')
+        #email is associated with an employees acount
+        if _Employee.objects.filter(email=_email).exists(): 
+            if request.method == 'GET':
+                form = add_event()
+                events = list(_Events.objects.values(
+                            "event_title",
+                            "event_start",
+                            "event_end",
+                        ))
+                return render(request, 'artTubeApp/emp_dash.html', {'events': events, 'form': form})
+            if request.method == 'POST':
+                query_title = request.POST.get('query')
+                if query_title:
+                    form = add_event()
+                    queried_events = _Events.objects.filter(event_title__icontains=query_title)
+                    return render(request, 'artTubeApp/emp_dash.html', {'form': form, 'events': queried_events})
+                form = add_event(request.POST)
+                if form.is_valid():
+                    event_title = form.cleaned_data.get('event_title')
+                    event_start = form.cleaned_data.get('event_start')
+                    event_end = form.cleaned_data.get('event_end')
+                    if _Events.objects.filter(event_title=event_title).exists():
+                        form.add_error('event_title', 'Event name unavailable')
+                    else:
+                        # create event entry
+                        _Events.objects.create(
+                            event_title=event_title,
+                            event_start= event_start,
+                            event_end=event_end
+                        )
+                return redirect('employee')
+        else:
+            #redirect to home page
+            return redirect('/')
+        return render(request, 'artTubeApp/emp_dash.html', {'form': form})
     else:
         return redirect('/login?next=/employee/')
 
