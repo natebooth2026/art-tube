@@ -22,17 +22,27 @@
                 <button type="Submit">Create Event</button>
             </form>
 
-
-            <h2>Event History</h2>
+            <h2 style="margin-top: 2rem;">Event History</h2>
             <form method="post">
                 {% csrf_token %}
                 <label for="site-search">Search Past Events:</label>
                 <input type="search" id="site-search" name="query" />
                 <button>Search</button>
             </form>
-            {% for event in events %}
-                    <p> {{ event.event_title}} , {{event.event_start}} , {{event.event_end}} </p>
-            {% endfor %}
+            <table class="table table-bordered w-75 mx-auto">
+                <thead>
+                    <th scope="col">Title</th>
+                    <th scope="col">Event Start</th>
+                    <th scope="col">Event End</th>
+                </thead>
+                {% for event in events %}
+                <tbody>
+                        <td> {{ event.event_title}} </td>
+                        <td> {{event.event_start}} </td>
+                        <td> {{event.event_end}} </td>
+                </tbody>
+                {% endfor %}
+            </table>
             Don't have an account? <a href="{% url 'signup' %}"><button>Go to Sign Up</button></a>
         </div>
     </body>

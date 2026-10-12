@@ -175,3 +175,23 @@ def gallery(request):
             )
         
         return render(request, 'artTubeApp/gallery.html', {'submissions': submissions})
+
+def events(request):
+    if request.method == 'GET':
+        events = list(_Events.objects.values(
+                                "event_title",
+                                "event_start",
+                                "event_end",
+                            ))
+    elif request.method == 'POST':
+        query_title = request.POST.get('query')
+        if query_title:
+            queried_events = _Events.objects.filter(event_title__icontains=query_title)
+            return render(request, 'artTubeApp/events.html', {'events': queried_events})
+        else:
+            events = list(_Events.objects.values(
+                                "event_title",
+                                "event_start",
+                                "event_end",
+                            ))
+    return render(request, 'artTubeApp/events.html', {'events': events})
