@@ -15,6 +15,9 @@
         <p class="text-center" style="font-family: Workbench, sans-serif; font-size: 2rem;">Employee Dashboard</p>
          <div class="content text-center" >
             <h2>Add Event</h2>
+            {% if confirmation %}
+                <p class="alert alert-success" role="status">{{ confirmation }}</p>
+            {% endif %}
             <form method="post">
                 {% csrf_token %}
                 {{ form.as_p }}
@@ -27,7 +30,7 @@
                 {% csrf_token %}
                 <label for="site-search">Search Past Events:</label>
                 <input type="search" id="site-search" name="query" />
-                <button>Search</button>
+                <button name="search-events">Search</button>
             </form>
             <table class="table table-bordered w-75 mx-auto">
                 <thead>

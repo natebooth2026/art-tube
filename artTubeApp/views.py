@@ -72,29 +72,36 @@ def signup(request):
 def emp_dashboard(request):
     if request.session.get('current_user'):
         _email = request.session.get('current_user')
+        form = add_event()
+        events = list(_Events.objects.values(
+                    "event_title",
+                    "event_start",
+                    "event_end",
+                ))
         #email is associated with an employees acount
         if _Employee.objects.filter(email=_email).exists(): 
             if request.method == 'GET':
-                form = add_event()
-                events = list(_Events.objects.values(
-                            "event_title",
-                            "event_start",
-                            "event_end",
-                        ))
                 return render(request, 'artTubeApp/emp_dash.html', {'events': events, 'form': form})
             if request.method == 'POST':
-                query_title = request.POST.get('query')
-                if query_title:
-                    form = add_event()
-                    queried_events = _Events.objects.filter(event_title__icontains=query_title)
-                    return render(request, 'artTubeApp/emp_dash.html', {'form': form, 'events': queried_events})
                 form = add_event(request.POST)
-                if form.is_valid():
+                #user queries events
+                if 'search-events' in request.POST:
+                    query_title = request.POST.get('query')
+                    if query_title:
+                        form = add_event()
+                        queried_events = _Events.objects.filter(event_title__icontains=query_title)
+                        return render(request, 'artTubeApp/emp_dash.html', {'form': form, 'events': queried_events})
+                    elif not query_title:
+                        return redirect('employee')
+                #user submits new event
+                elif form.is_valid():
                     event_title = form.cleaned_data.get('event_title')
                     event_start = form.cleaned_data.get('event_start')
                     event_end = form.cleaned_data.get('event_end')
                     if _Events.objects.filter(event_title=event_title).exists():
                         form.add_error('event_title', 'Event name unavailable')
+                    elif event_end < event_start:
+                        form.add_error('event_end', 'End date/time must come after start date/time')
                     else:
                         # create event entry
                         _Events.objects.create(
@@ -102,11 +109,11 @@ def emp_dashboard(request):
                             event_start= event_start,
                             event_end=event_end
                         )
-                return redirect('employee')
+                    form=add_event() #reset form
+                    return render(request, 'artTubeApp/emp_dash.html', {'form': form, 'events': events, 'confirmation': 'Event successfully submitted!'})
         else:
             #redirect to home page
             return redirect('/')
-        return render(request, 'artTubeApp/emp_dash.html', {'form': form})
     else:
         return redirect('/login?next=/employee/')
 
