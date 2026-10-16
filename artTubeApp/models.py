@@ -11,6 +11,7 @@ from django.db import models
 
 class Admin(models.Model):
     email = models.OneToOneField('User', models.DO_NOTHING, db_column='email')
+    admin_id = models.AutoField(primary_key=True)
     employee = models.ForeignKey('Employee', models.DO_NOTHING)
     secure_q1 = models.CharField(max_length=255)
     secure_q2 = models.CharField(max_length=255)
@@ -109,7 +110,7 @@ class DjangoAdminLog(models.Model):
     user = models.ForeignKey(AuthUser, models.DO_NOTHING)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'django_admin_log'
 
 
@@ -118,7 +119,7 @@ class DjangoContentType(models.Model):
     model = models.CharField(max_length=100)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'django_content_type'
         unique_together = (('app_label', 'model'),)
 
@@ -130,7 +131,7 @@ class DjangoMigrations(models.Model):
     applied = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'django_migrations'
 
 
@@ -140,7 +141,7 @@ class DjangoSession(models.Model):
     expire_date = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'django_session'
 
 
@@ -160,7 +161,7 @@ class Events(models.Model):
     event_end = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'events'
 
 
@@ -180,7 +181,7 @@ class Occupancy(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'occupancy'
 
 

@@ -71,13 +71,21 @@ def signup(request):
 
 def emp_dashboard(request):
     if request.session.get('current_user'):
-        return render(request, 'artTubeApp/emp_dash.html')
+        email = request.session.get('current_user')
+        is_emp = False
+        if _Employee.objects.filter(email=email):
+            is_emp = True
+        return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
     else:
         return redirect('/login?next=/employee/')
 
 def admin_dashboard(request):
     if request.session.get('current_user'):
-        return render(request, 'artTubeApp/admin_dash.html')
+        email = request.session.get('current_user')
+        is_admin = False
+        if _Admin.objects.filter(email=email):
+            is_admin = True
+        return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
     else:
         return redirect('/login?next=/admin/')
 

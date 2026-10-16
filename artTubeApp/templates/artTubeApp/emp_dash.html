@@ -12,6 +12,12 @@
         </div>
         {% include 'artTubeApp/navbar.html' %}
         <hr>
-        <h1>Employee Dashboard</h1>
+        {% if is_emp %}
+            <h1>Employee Dashboard</h1>
+        {% else %}
+            <p>You are not authorized to access this page. Contact an admin if this is in error.</p>
+            <br />
+            <a href="{% url 'home' %}"><button>Return Home</button></a>
+        {% endif %}
     </body>
 </html>
