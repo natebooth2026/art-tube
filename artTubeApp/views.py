@@ -22,9 +22,8 @@ def login(request):
             _email = form.cleaned_data.get('email')
             _password = form.cleaned_data.get('pwd')
 
-            users = _User.objects.get(email=_email)
-
-            if not users:
+            users = _User.objects.filter(email=_email).first()
+            if users is None:
                 form.add_error('email', 'Email is not associated with an account. Please create a new account or try another email.')
             elif check_password(_password, users.password):
                 next_page = request.POST.get('next') or request.GET.get('next') or '/'
@@ -51,9 +50,12 @@ def signup(request):
             username = form.cleaned_data.get('username')
             pwd = make_password(form.cleaned_data.get('pwd'))
 
-            if _User.objects.filter(username=username).exists():
+            if _User.objects.filter(username=username).exists() and _User.objects.filter(email=email).exists():
                 form.add_error('username', 'Username has been taken.')
-            if _User.objects.filter(email=email).exists():
+                form.add_error('email', 'Email already registered.')
+            elif _User.objects.filter(username=username).exists():
+                    form.add_error('email', 'Email already registered.')
+            elif _User.objects.filter(email=email).exists():
                 form.add_error('email', 'Email already registered.')
             else:
                 _User.objects.create(
@@ -95,27 +97,30 @@ def emp_dashboard(request):
                         return redirect('employee')
                 #user submits new event
                 elif form.is_valid():
-                    event_title = form.cleaned_data.get('event_title')
-                    event_start = form.cleaned_data.get('event_start')
-                    event_end = form.cleaned_data.get('event_end')
-                    if _Events.objects.filter(event_title=event_title).exists():
+                    _event_title = form.cleaned_data.get('event_title')
+                    _event_start = form.cleaned_data.get('event_start')
+                    _event_end = form.cleaned_data.get('event_end')
+                    if _Events.objects.filter(event_start__lt=_event_end, event_end__gt=_event_start).exists():
+                        form.add_error('event_title', 'Event overlaps with other events')
+                    elif _Events.objects.filter(event_title=_event_title).exists():
                         form.add_error('event_title', 'Event name unavailable')
-                    elif event_end < event_start:
+                    elif _event_end < _event_start:
                         form.add_error('event_end', 'End date/time must come after start date/time')
                     else:
                         # create event entry
                         _Events.objects.create(
-                            event_title=event_title,
-                            event_start= event_start,
-                            event_end=event_end
+                            event_title=_event_title,
+                            event_start= _event_start,
+                            event_end=_event_end
                         )
-                    form=add_event() #reset form
-                    return render(request, 'artTubeApp/emp_dash.html', {'form': form, 'events': events, 'confirmation': 'Event successfully submitted!'})
+                        form=add_event() #reset form
+                        return render(request, 'artTubeApp/emp_dash.html', {'form': form, 'events': events, 'confirmation': 'Event successfully submitted!'})
+                    return render(request, 'artTubeApp/emp_dash.html', {'form': form, 'events': events})
         else:
             #redirect to home page
             return redirect('/')
     else:
-        return redirect('/login?next=/employee/')
+        return redirect('/login/?next=/employee/')
 
 def admin_dashboard(request):
     if request.session.get('current_user'):
