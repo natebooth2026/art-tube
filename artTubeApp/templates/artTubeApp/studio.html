@@ -17,7 +17,7 @@
         <h1>ArtTube Canvas</h1>
         <h3>Welcome to The World's Canvas!</h3>
         <a href="{% url 'home' %}"><Button>Go Home</Button></a>
-        <br /><br /><br /><br />
+        <br /><br /><br />
         <b>Pending Requests:</b>
         <br /><br />
         {% if request_len > 0 %}
@@ -26,6 +26,7 @@
                     <div class="piece">
                         <a href="{% url 'studio_req_view' r.id %}"><img src="data:image/*; base64,{{ r.img_b64 }}" alt="{{ r.img_title }}" style="max-width: 200px;"></a>
                         <p class="studio_item_title">Title: {{ r.img_title }}</p>
+                        <p class="studio_item_title">Category: {{ r.img_category.name }}</p>
                     </div>
                 {% endif %}
             {% endfor %}
@@ -33,7 +34,7 @@
             <i>No requests pending...</i>
         {% endif %}
         <br /><br />
-        <a href="{% url 'studio_new_req' %}"><button>Submit New Request</button></a><button>See Denied Requests</button>
+        <a href="{% url 'studio_new_req' %}"><button>Submit New Request</button></a><a href="{% url 'studio_denied_reqs' %}"><button>See Denied Requests</button></a>
         <br /> <br /> <br />
         <b>Approved Pieces:</b>
         <br /><br />
@@ -42,6 +43,7 @@
                 <div class="piece">
                     <a href="{% url 'studio_sub_view' p.id %}"><img src="data:image/*; base64,{{ p.img_b64 }}" alt="{{ p.img_title }}" style="max-width: 200px;"></a>
                     <p class="studio_item_title">Title: {{ p.img_title }}</p>
+                    <p class="studio_item_title">Category: {{ p.img_category.name }}</p>
                 </div>
             {% endfor %}
         {% else %}

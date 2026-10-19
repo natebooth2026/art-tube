@@ -23,6 +23,19 @@ class account_validate(forms.Form):
     email = forms.EmailField()
     pwd = forms.CharField(widget=forms.PasswordInput(), label="Password")
 
+class account_validate_emailMFA(forms.Form):
+    email_code = forms.PasswordInput()
+
+class account_validate_questionsSetup(forms.Form):
+    q1 = forms.CharField(max_length=100)
+    q_answer1 = forms.CharField(max_length=1000)
+    q2 = forms.CharField(max_length=100)
+    q_answer2 = forms.CharField(max_length=1000)
+
+class account_validate_questionsMFA(forms.Form):
+    q_answer1 = forms.CharField(max_length=1000)
+    q_answer2 = forms.CharField(max_length=1000)
+
 class CategoryChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return obj.name

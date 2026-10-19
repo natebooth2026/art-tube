@@ -30,6 +30,7 @@ urlpatterns = [
     path('canvas/request/', views.submit_request_page, name='studio_new_req'),
     path('canvas/request/success', views.request_submitted, name='studio_req_success'),
     path('canvas/request/wait', views.request_wait, name='studio_wait_req'),
+    path('canvas/denied_requests', views.denied_reqs, name='studio_denied_reqs'),
     path('employee/', views.emp_dashboard, name='employee'),
     path('admin/', views.admin_dashboard, name='admin'),
     path('gallery/', views.gallery, name='gallery'),

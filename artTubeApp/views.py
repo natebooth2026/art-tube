@@ -94,7 +94,7 @@ def admin_dashboard(request):
 def submit_request_page(request):
     if request.session.get('current_user'):
         last_req = _Request.objects.filter(email=request.session.get('current_user')).order_by('-time').first()
-        if last_req and datetime.now(UTC) < (last_req.time + timedelta(hours=12)):
+        if last_req and datetime.now(UTC) < (last_req.time + timedelta(hours=2)):
             request.session['request_allowed'] = False
             return redirect('/canvas/request/wait')
         else:
@@ -178,22 +178,22 @@ def request_wait(request):
     if request.session.get('current_user'):
         if not request.session.get('request_allowed'):
             last_req = _Request.objects.filter(email=request.session.get('current_user')).order_by('-time').first()
-            if last_req and datetime.now(UTC) >= (last_req.time + timedelta(hours=12)):
+            if last_req and datetime.now(UTC) >= (last_req.time + timedelta(hours=2)):
                 request.session['request_allowed'] = True
                 return redirect('/canvas/request')
             else:
-                wait_time = (last_req.time + timedelta(hours=12)) - datetime.now(UTC);
+                wait_time = (last_req.time + timedelta(hours=2)) - datetime.now(UTC);
                 if wait_time.total_seconds() < 60:
                     wait_time = str(round(wait_time.total_seconds())) + " seconds"
-                    wait_time += " (or until " + str(last_req.time + timedelta(hours=12)) + ")"
+                    wait_time += " (or until " + str(last_req.time + timedelta(hours=2)) + ")"
                 elif wait_time.total_seconds() < 3600:
                     minutes_calc = divmod(wait_time.total_seconds(), 60)
                     wait_time = str(round(minutes_calc[0] + (minutes_calc[1] / 60.0))) + " minute(s)"
-                    wait_time += " (or until " + str(last_req.time + timedelta(hours=12)) + ")"
+                    wait_time += " (or until " + str(last_req.time + timedelta(hours=2)) + ")"
                 else:
                     hours_calc = divmod(wait_time.total_seconds(), 3600)
                     wait_time = str(round(hours_calc[0] + (hours_calc[1] / 3600.0))) + " hour(s)"
-                    wait_time += " (or until " + str(last_req.time + timedelta(hours=12)) + ")"
+                    wait_time += " (or until " + str(last_req.time + timedelta(hours=2)) + " UTC)"
                 return render(request, 'artTubeApp/studio_wait_req.html', {'wait_time': wait_time})
         else:
             return redirect('/canvas/request')
@@ -232,6 +232,18 @@ def sub_view(request, id = -1):
         return redirect('studio')
     else:
         return render(request, 'artTubeApp/studio_view.html', {'is_sub': True, 'item': _Submissions.objects.get(id=id)})
+
+def denied_reqs(request):
+    if request.session.get('current_user'):
+        _email = request.session.get('current_user')
+        if _Request.objects.filter(email=_email).exists():
+            imgs = _Request.objects.filter(email=_email)
+            img_categories = [_Category.objects.get(id=i.img_category.id).name for i in imgs]
+        else:
+            imgs = []
+        return render(request, 'artTubeApp/studio_denied_reqs.html', {'requests': imgs, 'request_len': len(imgs), 'request_cat': img_categories})
+    else:
+        return redirect('/login?next=/canvas/denied_requests')
 
 def creator_studio(request):
     print("null")
