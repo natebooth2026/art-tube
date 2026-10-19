@@ -1,6 +1,7 @@
 from django import forms
-from django.utils.html import strip_tags
 from .models import Category
+from django.core.exceptions import ValidationError
+from magic import from_buffer
 
 class account_creation(forms.Form):
     email = forms.EmailField()
@@ -29,9 +30,25 @@ class CategoryChoiceField(forms.ModelChoiceField):
 class sub_request_form(forms.Form):
     img = forms.ImageField()
     title = forms.CharField(max_length=100)
-    desc = forms.CharField(max_length=1000)
+    desc = forms.CharField(max_length=1000, required=False)
     category = CategoryChoiceField(
         queryset=Category.objects.all(),
         empty_label="Intended Category...",
         label = "Category"
     )
+
+    def clean_img(self):
+        img = self.cleaned_data.get('img')
+        if not img:
+            return img
+        if img:
+            try:
+                mime = from_buffer(img.read(2048), mime=True)
+                img.seek(0)
+            except Exception as e:
+                raise ValidationError(f"File inspection failed: {str(e)}")
+
+            allowed_types = ['image/jpeg', 'image/png', 'image/webp']
+            if mime not in allowed_types:
+                raise ValidationError(f"Invalid file type: {mime}")
+        return img

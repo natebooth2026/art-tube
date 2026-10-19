@@ -2,9 +2,11 @@ from base64 import b64encode #for image decoding
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils.http import url_has_allowed_host_and_scheme
+from datetime import timedelta, datetime, UTC
 
 from .forms import account_creation, account_validate, sub_request_form
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category
+from .sanitize import sanitize_img
 
 import base64
 
@@ -91,11 +93,17 @@ def admin_dashboard(request):
 
 def submit_request_page(request):
     if request.session.get('current_user'):
+        last_req = _Request.objects.filter(email=request.session.get('current_user')).order_by('-time').first()
+        if last_req and datetime.now(UTC) < (last_req.time + timedelta(hours=12)):
+            request.session['request_allowed'] = False
+            return redirect('/canvas/request/wait')
+        else:
+            request.session['request_allowed'] = True
         if request.method == "GET":
             form1 = sub_request_form()
             form2 = account_validate()
         elif request.method == "POST":
-            form1 = sub_request_form(request.POST)
+            form1 = sub_request_form(request.POST, request.FILES)
             form2 = account_validate(request.POST)
 
             if form2.is_valid():
@@ -118,17 +126,32 @@ def submit_request_page(request):
                             _desc = form1.cleaned_data.get('desc')
                             _category = form1.cleaned_data.get('category')
 
+                            # file santiziation
+                            try:
+                                sanitize0, sanitize1 = sanitize_img(_img)
+                                _img = sanitize0.read()
+                                img_ext = sanitize1
+                            except ValueError:
+                                _img, img_ext = None
+
+                            have_img = have_title = have_category = True
+
                             if not _img:
-                                form1.add_error('img', 'Must provide an image file.')
+                                have_img = False
+                                form1.add_error('img', 'Must provide a valid image file. Supported formats: .jpeg/.jpg, .png, .webp')
                             if not _title:
+                                have_title = False
                                 form1.add_error('title', 'Title is required.')
                             if not _Category.objects.filter(id=_category.id):
+                                have_category = False
                                 form1.add_error('category', 'Invalid category.')
-                            if _img and _title and _Category.objects.filter(name=_category):
+                            if not request.session.get('request_allowed'):
+                                return redirect('/canvas/request/wait')
+                            if have_img and have_title and have_category:
                                 _Request.objects.create(
-                                    email=user.email,
+                                    email=user,
                                     img=_img,
-                                    img_type=_img.content_type,
+                                    img_type=img_ext,
                                     img_title=_title,
                                     img_desc=_desc,
                                     img_category=_category,
@@ -137,7 +160,7 @@ def submit_request_page(request):
                                     denial_reason=""
                                 )
                                 request.session['request_success'] = True
-                                return redirect('/canvas/request/success')
+                                return redirect('/canvas/request/success')  
         return render(request, 'artTubeApp/studio_new_req.html', {'r_form': form1, 'v_form': form2})
     else:
         return redirect('/login?next=/canvas/request/')
@@ -148,6 +171,34 @@ def request_submitted(request):
             request.session['request_success'] = False
             return render(request, 'artTubeApp/studio_req_success.html')
         return redirect('/canvas/request')
+    else:
+        return redirect('/login?next=/canvas/request')
+
+def request_wait(request):
+    if request.session.get('current_user'):
+        if not request.session.get('request_allowed'):
+            last_req = _Request.objects.filter(email=request.session.get('current_user')).order_by('-time').first()
+            if last_req and datetime.now(UTC) >= (last_req.time + timedelta(hours=12)):
+                request.session['request_allowed'] = True
+                return redirect('/canvas/request')
+            else:
+                wait_time = (last_req.time + timedelta(hours=12)) - datetime.now(UTC);
+                if wait_time.total_seconds() < 60:
+                    wait_time = str(round(wait_time.total_seconds())) + " seconds"
+                    wait_time += " (or until " + str(last_req.time + timedelta(hours=12)) + ")"
+                elif wait_time.total_seconds() < 3600:
+                    minutes_calc = divmod(wait_time.total_seconds(), 60)
+                    wait_time = str(round(minutes_calc[0] + (minutes_calc[1] / 60.0))) + " minute(s)"
+                    wait_time += " (or until " + str(last_req.time + timedelta(hours=12)) + ")"
+                else:
+                    hours_calc = divmod(wait_time.total_seconds(), 3600)
+                    wait_time = str(round(hours_calc[0] + (hours_calc[1] / 3600.0))) + " hour(s)"
+                    wait_time += " (or until " + str(last_req.time + timedelta(hours=12)) + ")"
+                return render(request, 'artTubeApp/studio_wait_req.html', {'wait_time': wait_time})
+        else:
+            return redirect('/canvas/request')
+    else:
+        return redirect('/login?next=/canvas/request')
 
 def studio_page(request):
     if request.session.get('current_user'):

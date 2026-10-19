@@ -7,8 +7,19 @@
         <link href="https://fonts.googleapis.com/css2?family=Workbench&display=swap" rel="stylesheet">
     </head>
     <body>
+        <div class="mx-auto p-2" style="width: 200px; font-family: Workbench, sans-serif;">
+            <h1 style="font-size: 3rem;">ArtTube</h1>
+        </div>
+        {% include 'artTubeApp/navbar.html' %}
+        <hr>
+        <h1>ArtTube Canvas</h1>
+        <a href="{% url 'studio' %}"><button>Go Back</button></a>
+        <br /> <br />
+
         <h1>Request submitted!</h1>
         <p>Thank you for your contribution! We will review it for submission!</p>
+        <br />
+        <p>Got more art? Please wait at least 12 hours before submitting your next request! Thank you!</p>
         <a href="{% url 'studio' %}"><button>Go to Canvas</button></a><a href="{% url 'home' }"><button>Go Home</button></a>
     </body>
 </html>

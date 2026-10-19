@@ -17,7 +17,7 @@
         <br /> <br />
         <h3>New Submission Request</h3>
         
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <div id="req_form" style="display: inline-block">
                 {% csrf_token %}
                 {{ r_form.as_p }}

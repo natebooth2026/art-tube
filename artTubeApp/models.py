@@ -195,7 +195,7 @@ class Request(models.Model):
     admin_approve = models.IntegerField()
     denied = models.IntegerField()
     denial_reason = models.CharField(max_length=255, blank=True, null=True)
-    time = models.DateTimeField()
+    time = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         managed = False
