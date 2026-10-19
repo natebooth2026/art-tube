@@ -12,6 +12,41 @@
         </div>
         {% include 'artTubeApp/navbar.html' %}
         <hr>
-        <h1>Employee Dashboard</h1>
+        <p class="text-center" style="font-family: Workbench, sans-serif; font-size: 2rem;">Employee Dashboard</p>
+         <div class="content text-center" >
+            <h2>Add Event</h2>
+            {% if confirmation %}
+                <p class="alert alert-success" role="status">{{ confirmation }}</p>
+            {% endif %}
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <input type="hidden" name="next" value="{{ request.GET.next }}">
+                <button type="Submit">Create Event</button>
+            </form>
+
+            <h2 style="margin-top: 2rem;">Event History</h2>
+            <form method="post">
+                {% csrf_token %}
+                <label for="site-search">Search Past Events:</label>
+                <input type="search" id="site-search" name="query" />
+                <button name="search-events">Search</button>
+            </form>
+            <table class="table table-bordered w-75 mx-auto">
+                <thead>
+                    <th scope="col">Title</th>
+                    <th scope="col">Event Start</th>
+                    <th scope="col">Event End</th>
+                </thead>
+                {% for event in events %}
+                <tbody>
+                        <td> {{ event.event_title}} </td>
+                        <td> {{event.event_start}} </td>
+                        <td> {{event.event_end}} </td>
+                </tbody>
+                {% endfor %}
+            </table>
+            Don't have an account? <a href="{% url 'signup' %}"><button>Go to Sign Up</button></a>
+        </div>
     </body>
 </html>
