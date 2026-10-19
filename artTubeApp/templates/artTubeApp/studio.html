@@ -33,7 +33,7 @@
             <i>No requests pending...</i>
         {% endif %}
         <br /><br />
-        <button>Submit New Request</button><button>See Denied Requests</button>
+        <a href="{% url 'studio_new_req' %}"><button>Submit New Request</button></a><button>See Denied Requests</button>
         <br /> <br /> <br />
         <b>Approved Pieces:</b>
         <br /><br />
@@ -48,6 +48,5 @@
             <i>No pieces found...request a submission today!</i>
         {% endif %}
         <br /><br />
-        <button>Click Here to Take Down a Piece</button>
     </body>
 </html>

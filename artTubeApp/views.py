@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils.http import url_has_allowed_host_and_scheme
 
-from .forms import account_creation, account_validate
+from .forms import account_creation, account_validate, sub_request_form
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category
 
 import base64
@@ -91,9 +91,63 @@ def admin_dashboard(request):
 
 def submit_request_page(request):
     if request.session.get('current_user'):
-        return render(request, 'artTubeApp/request.html')
+        if request.method == "GET":
+            form1 = sub_request_form()
+            form2 = account_validate()
+        elif request.method == "POST":
+            form1 = sub_request_form(request.POST)
+            form2 = account_validate(request.POST)
+
+            if form2.is_valid():
+                email = form2.cleaned_data.get('email')
+                pwd = form2.cleaned_data.get('pwd')
+
+                user = _User.objects.get(email=email)
+
+                if not user:
+                    form2.add_error('email', 'User not found. Try again.')
+                else:
+                    if user.email != request.session.get('current_user'):
+                        form2.add_error('email', 'Email doesn\'t match current login. You must verify with your account details only.')
+                    elif not check_password(pwd, user.password):
+                        form2.add_error('email', 'Incorrect email/password combination. Try again.')
+                    else:
+                        if form1.is_valid():
+                            _img = form1.cleaned_data.get('img')
+                            _title = form1.cleaned_data.get('title')
+                            _desc = form1.cleaned_data.get('desc')
+                            _category = form1.cleaned_data.get('category')
+
+                            if not _img:
+                                form1.add_error('img', 'Must provide an image file.')
+                            if not _title:
+                                form1.add_error('title', 'Title is required.')
+                            if not _Category.objects.filter(id=_category.id):
+                                form1.add_error('category', 'Invalid category.')
+                            if _img and _title and _Category.objects.filter(name=_category):
+                                _Request.objects.create(
+                                    email=user.email,
+                                    img=_img,
+                                    img_type=_img.content_type,
+                                    img_title=_title,
+                                    img_desc=_desc,
+                                    img_category=_category,
+                                    admin_approve=user.admin_approve,
+                                    denied=0,
+                                    denial_reason=""
+                                )
+                                request.session['request_success'] = True
+                                return redirect('/canvas/request/success')
+        return render(request, 'artTubeApp/studio_new_req.html', {'r_form': form1, 'v_form': form2})
     else:
         return redirect('/login?next=/canvas/request/')
+    
+def request_submitted(request):
+    if request.session.get('current_user'):
+        if request.session.get('request_success') == True:
+            request.session['request_success'] = False
+            return render(request, 'artTubeApp/studio_req_success.html')
+        return redirect('/canvas/request')
 
 def studio_page(request):
     if request.session.get('current_user'):
