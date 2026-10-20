@@ -1,4 +1,6 @@
 from base64 import b64encode #for image decoding
+from enum import Enum
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -8,7 +10,37 @@ from .forms import account_creation, account_validate, sub_request_form, add_eve
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
 from .sanitize import sanitize_img
 
-import base64
+class LogType(Enum):
+    NONE = -1
+    ACCOUNT_LOGIN = 0
+    ACCOUNT_LOGOUT = 1
+    ACCOUNT_CREATE = 2
+    EMPLOYEE_ACCESS = 3
+    EMPLOYEE_EVENT_CREATE = 4
+    EMPLOYEE_EVENT_MODIFY = 5
+    EMPLOYEE_REQUEST_APPROVE = 6
+    EMPLOYEE_REQUEST_DENY = 7
+    ADMIN_ACCESS = 8
+    ADMIN_REQUEST_APPROVE = 9
+    ADMIN_REQUEST_DENY = 10
+    ADMIN_SWITCH_ROLE = 11
+    USER_SUBMIT_REQUEST = 12
+    USER_ATTEMPT_REQUEST = 13
+    USER_FAILED_REQUEST = 14
+    USER_ACCESS_VIEW = 15
+    USER_ACCESS_STUDIO = 16
+    USER_CHANGE_SUBMISSION = 17
+    EMPLOYEE_REVERT_APPROVE = 18
+    ADMIN_REVERT_APPROVE = 19
+    ACCOUNT_FAILED_LOGIN = 20
+    ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT = 21
+    ACCOUNT_FAILED_CREATE = 22
+    EMPLOYEE_FAILED_CREATE = 23
+    EMPLOYEE_FAILED_MODIFY = 24
+    EMPLOYEE_FAILED_REQUEST_DECISION = 25
+    EMPLOYEE_FAILED_ACCESS = 26
+    USER_ATTEMPT_EMP_DASHBOARD = 27
+    USER_ATTEMPT_ADMIN_PORTAL = 28
 
 # Create your views here.
 
@@ -307,7 +339,7 @@ def gallery(request):
 
         #convert LONGBLOB to image
         for submission in submissions:
-            binary_image = base64.b64encode(submission["img"]).decode("ascii")
+            binary_image = b64encode(submission["img"]).decode("ascii")
             submission["img"] = (
                 f"data:{submission['img_type']};base64,{binary_image}"
             )
