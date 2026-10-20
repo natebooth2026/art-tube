@@ -161,7 +161,7 @@ class Events(models.Model):
     event_end = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'events'
 
 
@@ -181,7 +181,7 @@ class Occupancy(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'occupancy'
 
 

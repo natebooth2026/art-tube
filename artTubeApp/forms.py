@@ -65,3 +65,9 @@ class sub_request_form(forms.Form):
             if mime not in allowed_types:
                 raise ValidationError(f"Invalid file type: {mime}")
         return img
+
+class add_event(forms.Form):
+    event_title = forms.CharField(max_length=30)
+    event_start = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), label="Start Date and Time")
+    event_end = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), label="End Date and Time")
+

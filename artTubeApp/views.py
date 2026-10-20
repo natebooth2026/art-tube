@@ -4,8 +4,8 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.utils.http import url_has_allowed_host_and_scheme
 from datetime import timedelta, datetime, UTC
 
-from .forms import account_creation, account_validate, sub_request_form
-from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category
+from .forms import account_creation, account_validate, sub_request_form, add_event
+from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
 from .sanitize import sanitize_img
 
 import base64
@@ -78,6 +78,54 @@ def emp_dashboard(request):
         if _Employee.objects.filter(email=email):
             is_emp = True
         return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
+    else:
+        return redirect('/login?next=/employee/')
+
+def emp_events(request):
+    if request.session.get('current_user'):
+        _email = request.session.get('current_user')
+        form = add_event()
+        events = list(_Events.objects.values(
+                    "event_title",
+                    "event_start",
+                    "event_end",
+                ))
+        #email is associated with an employees acount
+        if _Employee.objects.filter(email=_email).exists(): 
+            if request.method == 'GET':
+                return render(request, 'artTubeApp/emp_dash.html', {'events': events, 'form': form})
+            if request.method == 'POST':
+                form = add_event(request.POST)
+                #user queries events
+                if 'search-events' in request.POST:
+                    query_title = request.POST.get('query')
+                    if query_title:
+                        form = add_event()
+                        queried_events = _Events.objects.filter(event_title__icontains=query_title)
+                        return render(request, 'artTubeApp/emp_dash.html', {'form': form, 'events': queried_events})
+                    elif not query_title:
+                        return redirect('employee')
+                #user submits new event
+                elif form.is_valid():
+                    event_title = form.cleaned_data.get('event_title')
+                    event_start = form.cleaned_data.get('event_start')
+                    event_end = form.cleaned_data.get('event_end')
+                    if _Events.objects.filter(event_title=event_title).exists():
+                        form.add_error('event_title', 'Event name unavailable')
+                    elif event_end < event_start:
+                        form.add_error('event_end', 'End date/time must come after start date/time')
+                    else:
+                        # create event entry
+                        _Events.objects.create(
+                            event_title=event_title,
+                            event_start= event_start,
+                            event_end=event_end
+                        )
+                    form=add_event() #reset form
+                    return render(request, 'artTubeApp/emp_events.html', {'form': form, 'events': events, 'confirmation': 'Event successfully submitted!'})
+        else:
+            #redirect to home page
+            return redirect('/')
     else:
         return redirect('/login?next=/employee/')
 
@@ -265,3 +313,23 @@ def gallery(request):
             )
         
         return render(request, 'artTubeApp/gallery.html', {'submissions': submissions})
+
+def events(request):
+    if request.method == 'GET':
+        events = list(_Events.objects.values(
+                                "event_title",
+                                "event_start",
+                                "event_end",
+                            ))
+    elif request.method == 'POST':
+        query_title = request.POST.get('query')
+        if query_title:
+            queried_events = _Events.objects.filter(event_title__icontains=query_title)
+            return render(request, 'artTubeApp/events.html', {'events': queried_events})
+        else:
+            events = list(_Events.objects.values(
+                                "event_title",
+                                "event_start",
+                                "event_end",
+                            ))
+    return render(request, 'artTubeApp/events.html', {'events': events})

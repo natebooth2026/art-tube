@@ -1,0 +1,48 @@
+<html>
+    <head>
+        <title>ArtTube - Gallery</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Workbench&display=swap" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+        <style>
+            #carouselExampleAutoplaying .carousel-control-prev-icon,
+            #carouselExampleAutoplaying .carousel-control-next-icon {
+                filter: invert(1);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="mx-auto p-2" style="width: 200px; font-family: Workbench, sans-serif;">
+            <h1 style="font-size: 3rem;">ArtTube</h1>
+        </div>
+        {% include 'artTubeApp/navbar.html' %}
+        <hr>
+        <p class="text-center" style="font-family: Workbench, sans-serif; font-size: 2rem;">Welcome to Events!</p>
+        <div class="content text-center" >
+            <h2>Event History</h2>
+                <form method="post">
+                    {% csrf_token %}
+                    <label for="site-search">Search Past Events:</label>
+                    <input type="search" id="site-search" name="query" />
+                    <button>Search</button>
+                </form>
+                <table class="table table-bordered w-75 mx-auto">
+                    <thead>
+                        <th scope="col">Title</th>
+                        <th scope="col">Event Start</th>
+                        <th scope="col">Event End</th>
+                    </thead>
+                     {% for event in events %}
+                    <tbody>
+                       
+                            <td> {{ event.event_title}} </td>
+                            <td> {{event.event_start}} </td>
+                            <td> {{event.event_end}} </td>
+                    </tbody>
+                    {% endfor %}
+                </table>
+        </div>
+    </body>
+</html>

@@ -4,6 +4,7 @@
         <a href="{% url 'employee' %}"><button type="button" class="btn btn-secondary">Employee Dashboard</button></a>
         <a href="{% url 'admin' %}"><button type="button" class="btn btn-success">Admin Portal</button></a>
         <a href="{% url 'gallery' %}"><button type="button" class="btn btn-danger">Gallery</button></a>
+         <a href="{% url 'events' %}"><button type="button" class="btn btn-warning">Events</button></a>
     </div>
     <div class="d-grid gap-2 d-md-flex justify-content-md-center" style="margin-top: 1em;">
         {% if not request.session.current_user %}
