@@ -168,7 +168,7 @@ class Events(models.Model):
 class Log(models.Model):
     time = models.DateTimeField()
     ip = models.CharField(max_length=45)
-    action = models.CharField(max_length=255)
+    action = models.CharField(max_length=1000)
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:

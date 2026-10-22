@@ -1,5 +1,5 @@
 from base64 import b64encode #for image decoding
-from enum import Enum
+from markupsafe import escape
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.hashers import make_password, check_password
@@ -9,39 +9,8 @@ from datetime import timedelta, datetime, UTC
 from .forms import account_creation, account_validate, sub_request_form, add_event
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
 from .sanitize import sanitize_img
-
-class LogType(Enum):
-    NONE = -1
-    ACCOUNT_LOGIN = 0
-    ACCOUNT_LOGOUT = 1
-    ACCOUNT_CREATE = 2
-    EMPLOYEE_ACCESS = 3
-    EMPLOYEE_EVENT_CREATE = 4
-    EMPLOYEE_EVENT_MODIFY = 5
-    EMPLOYEE_REQUEST_APPROVE = 6
-    EMPLOYEE_REQUEST_DENY = 7
-    ADMIN_ACCESS = 8
-    ADMIN_REQUEST_APPROVE = 9
-    ADMIN_REQUEST_DENY = 10
-    ADMIN_SWITCH_ROLE = 11
-    USER_SUBMIT_REQUEST = 12
-    USER_ATTEMPT_REQUEST = 13
-    USER_FAILED_REQUEST = 14
-    USER_ACCESS_VIEW = 15
-    USER_ACCESS_STUDIO = 16
-    USER_CHANGE_SUBMISSION = 17
-    EMPLOYEE_REVERT_APPROVE = 18
-    ADMIN_REVERT_APPROVE = 19
-    ACCOUNT_FAILED_LOGIN = 20
-    ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT = 21
-    ACCOUNT_FAILED_CREATE = 22
-    EMPLOYEE_FAILED_CREATE = 23
-    EMPLOYEE_FAILED_MODIFY = 24
-    EMPLOYEE_FAILED_REQUEST_DECISION = 25
-    EMPLOYEE_FAILED_ACCESS = 26
-    USER_ATTEMPT_EMP_DASHBOARD = 27
-    USER_ATTEMPT_ADMIN_PORTAL = 28
-
+from .log import add_log as _slog, LogType
+    
 # Create your views here.
 
 def landing(request):
@@ -60,18 +29,22 @@ def login(request):
 
             if not users:
                 form.add_error('email', 'Email is not associated with an account. Please create a new account or try another email.')
+                _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request])
             elif check_password(_password, users.password):
                 next_page = request.POST.get('next') or request.GET.get('next') or '/'
                 request.session['current_user'] = users.email
+                _slog(LogType.ACCOUNT_LOGIN, extra_info=[request, request.session['current_user']])
                 return redirect(next_page)
             else:
-                form.add_error('email', 'Bad login. Try again.')
+                form.add_error('email', 'Email/password not found. Try again.')
+                _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, escape(_email)])
 
             
     return render(request, 'artTubeApp/login.html', {'form': form})
 
 def logout(request):
     if request.session.get('current_user'):
+        _slog(LogType.ACCOUNT_LOGOUT, extra_info=[request, request.session['current_user']])
         del request.session['current_user']
         return render(request, 'artTubeApp/logout.html')
     else:
@@ -86,18 +59,21 @@ def signup(request):
             pwd = make_password(form.cleaned_data.get('pwd'))
 
             if _User.objects.filter(username=username).exists():
+                _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, escape(email)])
                 form.add_error('username', 'Username has been taken.')
             if _User.objects.filter(email=email).exists():
+                _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, escape(email)])
                 form.add_error('email', 'Email already registered.')
             else:
                 _User.objects.create(
-                    username=username,
-                    email=email,
+                    username=escape(username),
+                    email=escape(email),
                     password=pwd,
                     admin_approve=0,
                     locked=0,
                     number_2fa=0
                 )
+                _slog(LogType.ACCOUNT_CREATE, extra_info=[request, escape(email)])
                 return redirect('login')
     else:
         form = account_creation()
@@ -109,10 +85,14 @@ def emp_dashboard(request):
         is_emp = False
         if _Employee.objects.filter(email=email):
             is_emp = True
+            _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, email, _Employee.objects.filter(email=email).employee_id, "Employee Dashboard"])
+        else:
+            _slog(LogType.USER_ATTEMPT_EMP_DASHBOARD, extra_info=[request, email])
         return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
     else:
         return redirect('/login?next=/employee/')
 
+#NEEDS LOGGING
 def emp_events(request):
     if request.session.get('current_user'):
         _email = request.session.get('current_user')
@@ -167,6 +147,11 @@ def admin_dashboard(request):
         is_admin = False
         if _Admin.objects.filter(email=email):
             is_admin = True
+            _slog(LogType.ADMIN_ACCESS, extra_info=[request, email, _Admin.objects.filter(email=email).admin_id, "Admin Portal"])
+        elif _Employee.objects.filter(email=email):
+            _slog(LogType.EMPLOYEE_ATTEMPT_ADMIN_PORTAL, extra_info=[request, email, _Employee.objects.filter(email=email).employee_id])
+        else:
+            _slog(LogType.USER_ATTEMPT_ADMIN_PORTAL, extra_info=[request, email])
         return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
     else:
         return redirect('/login?next=/admin/')
@@ -176,6 +161,7 @@ def submit_request_page(request):
         last_req = _Request.objects.filter(email=request.session.get('current_user')).order_by('-time').first()
         if last_req and datetime.now(UTC) < (last_req.time + timedelta(hours=2)):
             request.session['request_allowed'] = False
+            _slog(LogType.USER_ATTEMPT_REQUEST, extra_info=[request, request.session.get('current_user')])
             return redirect('/canvas/request/wait')
         else:
             request.session['request_allowed'] = True
@@ -193,11 +179,14 @@ def submit_request_page(request):
                 user = _User.objects.get(email=email)
 
                 if not user:
+                    _slog(LogType.USER_FAILED_REQUEST, extra_info=[request, request.session.get('current_user')])
                     form2.add_error('email', 'User not found. Try again.')
                 else:
                     if user.email != request.session.get('current_user'):
+                        _slog(LogType.USER_FAILED_REQUEST, extra_info=[request, request.session.get('current_user')])
                         form2.add_error('email', 'Email doesn\'t match current login. You must verify with your account details only.')
                     elif not check_password(pwd, user.password):
+                        _slog(LogType.USER_FAILED_REQUEST, extra_info=[request, request.session.get('current_user')])
                         form2.add_error('email', 'Incorrect email/password combination. Try again.')
                     else:
                         if form1.is_valid():
@@ -217,15 +206,19 @@ def submit_request_page(request):
                             have_img = have_title = have_category = True
 
                             if not _img:
+                                _slog(LogType.USER_FAILED_REQUEST, extra_info=[request, request.session.get('current_user')])
                                 have_img = False
                                 form1.add_error('img', 'Must provide a valid image file. Supported formats: .jpeg/.jpg, .png, .webp')
                             if not _title:
+                                _slog(LogType.USER_FAILED_REQUEST, extra_info=[request, request.session.get('current_user')])
                                 have_title = False
                                 form1.add_error('title', 'Title is required.')
                             if not _Category.objects.filter(id=_category.id):
+                                _slog(LogType.USER_FAILED_REQUEST, extra_info=[request, request.session.get('current_user')])
                                 have_category = False
                                 form1.add_error('category', 'Invalid category.')
                             if not request.session.get('request_allowed'):
+                                _slog(LogType.USER_ATTEMPT_REQUEST, extra_info=[request, request.session.get('current_user')])
                                 return redirect('/canvas/request/wait')
                             if have_img and have_title and have_category:
                                 _Request.objects.create(
@@ -240,6 +233,7 @@ def submit_request_page(request):
                                     denial_reason=""
                                 )
                                 request.session['request_success'] = True
+                                _slog(LogType.USER_SUBMIT_REQUEST, extra_info=[request, escape(email)])
                                 return redirect('/canvas/request/success')  
         return render(request, 'artTubeApp/studio_new_req.html', {'r_form': form1, 'v_form': form2})
     else:
@@ -283,6 +277,7 @@ def request_wait(request):
 def studio_page(request):
     if request.session.get('current_user'):
         _email = request.session.get('current_user')
+        _slog(LogType.USER_ACCESS_STUDIO, extra_info=[request, _email])
         if _Request.objects.filter(email=_email).exists():
             imgs = _Request.objects.filter(email=_email)
             img_categories = [_Category.objects.get(id=i.img_category.id).name for i in imgs]
@@ -303,14 +298,22 @@ def studio_page(request):
 
 def request_view(request, id = -1):
     if id < 0 or not _Request.objects.filter(id=id).exists():
+        _slog(LogType.USER_FAILED_ACCESS_VIEW, extra_info=[request, request.session.get('current_user'), escape(id)])
         return redirect('studio')
-    else:
+    elif _Request.objects.filter(id=id, email=request.session.get('current_user')):
+        _slog(LogType.USER_ACCESS_VIEW, extra_info=[request, request.session.get('current_user'), escape(id)])
         return render(request, 'artTubeApp/studio_view.html', {'is_sub': False, 'item': _Request.objects.get(id=id), 'category': _Request.objects.get(id=id).img_category.name})
+    else:
+        _slog(LogType.USER_FAILED_ACCESS_VIEW, extra_info=[request, request.session.get('current_user'), escape(id)])
+        return redirect('studio')
 
+#REQUIRES LOGGING BASED ON TRYING TO ACCESS NON-OWNED PRIVATE SUB
 def sub_view(request, id = -1):
     if id < 0 or not _Submissions.objects.filter(id=id).exists():
+        _slog(LogType.USER_FAILED_ACCESS_VIEW, extra_info=[request, request.session.get('current_user'), escape(id)])
         return redirect('studio')
     else:
+        _slog(LogType.USER_ACCESS_VIEW, extra_info=[request, request.session.get('current_user'), escape(id)])
         return render(request, 'artTubeApp/studio_view.html', {'is_sub': True, 'item': _Submissions.objects.get(id=id)})
 
 def denied_reqs(request):
@@ -325,9 +328,7 @@ def denied_reqs(request):
     else:
         return redirect('/login?next=/canvas/denied_requests')
 
-def creator_studio(request):
-    print("null")
-
+#NEEDS LOGGING
 def gallery(request):
     if request.method == 'GET':
         submissions = list(_Submissions.objects.values(
