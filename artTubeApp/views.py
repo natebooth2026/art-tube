@@ -6,9 +6,13 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.utils.http import url_has_allowed_host_and_scheme
 from datetime import timedelta, datetime, UTC
 
-from .forms import account_creation, account_validate, sub_request_form, add_event
+from .forms import account_creation, account_validate, sub_request_form, add_event, account_validate_emailMFA
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
 from .sanitize import sanitize_img
+
+import secrets
+from django.core.mail import send_mail
+
 
 class LogType(Enum):
     NONE = -1
@@ -106,14 +110,41 @@ def signup(request):
     return render(request, 'artTubeApp/signup.html', {'form': form})
 
 def emp_dashboard(request):
+    is_emp = False
     if request.session.get('current_user'):
         email = request.session.get('current_user')
-        is_emp = False
         if _Employee.objects.filter(email=email):
             is_emp = True
-        return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
     else:
         return redirect('/login?next=/employee/')
+    
+    if request.method == 'GET':
+        if(is_emp):
+            code = f"{secrets.randbelow(1_000_000):06d}"
+            request.session["employee_code"] = code
+            #send email with code
+            send_mail(
+                "ArtTube Verification code",
+                f"code is {code}",
+                None,  # Uses DEFAULT_FROM_EMAIL if configured
+                [email],
+                fail_silently=False,
+            )
+            form = account_validate_emailMFA()
+            return render(request, 'artTubeApp/validate_email_MFA.html', {'form': form})
+        else:
+            return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
+    elif request.method == 'POST':
+        form = account_validate_emailMFA(request.POST)
+        if form.is_valid():
+            email_code = form.cleaned_data.get('email_code')
+            code = request.session.get("employee_code")
+            #compare with code that was sent
+            if email_code == code:
+                return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
+            else:
+                is_emp = False
+                return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
 
 def emp_events(request):
     if request.session.get('current_user'):
@@ -167,16 +198,41 @@ def emp_events(request):
         return redirect('/login/?next=/employee/')
 
 def admin_dashboard(request):
+    is_admin = False
     if request.session.get('current_user'):
-        _email = request.session.get('current_user')
-        if _Admin.objects.filter(email=_email).exists(): #myst be an admin to access admin_dash
-            return render(request, 'artTubeApp/admin_dash.html')
-        else:
-            #redirect to home page
-            return redirect('/')
+        email = request.session.get('current_user')
+        if _Admin.objects.filter(email=email).exists(): #myst be an admin to access admin_dash
+            is_admin = True
     else:
         return redirect('/login?next=/admin/')
-
+    if request.method == 'GET':
+            if(is_admin):
+                code = f"{secrets.randbelow(1_000_000):06d}"
+                request.session["employee_code"] = code
+                #send email with code
+                send_mail(
+                    "ArtTube Verification code",
+                    f"code is {code}",
+                    None,  # Uses DEFAULT_FROM_EMAIL if configured
+                    [email],
+                    fail_silently=False,
+                )
+                form = account_validate_emailMFA()
+                return render(request, 'artTubeApp/validate_email_MFA.html', {'form': form})
+            else:
+                return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
+    elif request.method == 'POST':
+        form = account_validate_emailMFA(request.POST)
+        if form.is_valid():
+            email_code = form.cleaned_data.get('email_code')
+            code = request.session.get("employee_code")
+            #compare with code that was sent
+            if email_code == code:
+                return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
+            else:
+                is_admin = False
+                return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
+            
 def submit_request_page(request):
     if request.session.get('current_user'):
         last_req = _Request.objects.filter(email=request.session.get('current_user')).order_by('-time').first()

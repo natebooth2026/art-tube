@@ -24,7 +24,7 @@ class account_validate(forms.Form):
     pwd = forms.CharField(widget=forms.PasswordInput(), label="Password")
 
 class account_validate_emailMFA(forms.Form):
-    email_code = forms.PasswordInput()
+    email_code = forms.CharField(widget=forms.PasswordInput())
 
 class account_validate_questionsSetup(forms.Form):
     q1 = forms.CharField(max_length=100)

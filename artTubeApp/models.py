@@ -19,7 +19,7 @@ class Admin(models.Model):
     secure_a2 = models.CharField(max_length=255)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'admin'
 
 
@@ -96,7 +96,7 @@ class Category(models.Model):
     name = models.CharField(max_length=30)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'category'
 
 
@@ -151,7 +151,7 @@ class Employee(models.Model):
     can_approve_req = models.IntegerField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'employee'
 
 
@@ -172,7 +172,7 @@ class Log(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'log'
 
 
@@ -198,7 +198,7 @@ class Request(models.Model):
     time = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'request'
 
     def img_b64(self):
@@ -217,7 +217,7 @@ class Submissions(models.Model):
     approved_category = models.ForeignKey(Category, models.DO_NOTHING, db_column='approved_category')
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'submissions'
 
     def img_b64(self):
@@ -235,5 +235,5 @@ class User(models.Model):
     number_2fa = models.IntegerField(db_column='2FA')  # Field name made lowercase. Field renamed because it wasn't a valid Python identifier.
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'user'

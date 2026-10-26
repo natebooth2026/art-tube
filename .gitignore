@@ -219,3 +219,4 @@ __marimo__/
 
 #Migrations
 artTubeApp/migrations/*.py
+art_tube/settings copy.py
