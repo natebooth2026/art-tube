@@ -32,13 +32,8 @@ class FormTests(TestCase):
         self.assertFalse(form_result.is_valid())
 
     def test_invalid_event_start_end_times(self):
-        self.client.post(reverse("signup"), {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        })
-        new_emp = User.objects.get(email="test@gmail.com")
+        self.client.post(reverse("signup"), self.user_data)
+        new_emp = User.objects.get(email=self.user_data["email"])
         Employee.objects.create(
             email=new_emp,
             can_approve_req=0,
@@ -57,13 +52,8 @@ class FormTests(TestCase):
                         form.errors["event_end"])
 
     def test_duplicate_event_title(self):
-            self.client.post(reverse("signup"), {
-                "email": "test@gmail.com",
-                "username": "test",
-                "pwd": "testing213",
-                "confirm_pwd": "testing213",
-            })
-            new_emp = User.objects.get(email="test@gmail.com")
+            self.client.post(reverse("signup"), self.user_data)
+            new_emp = User.objects.get(email=self.user_data["email"])
             Employee.objects.create(
                 email=new_emp,
                 can_approve_req=0,
@@ -87,13 +77,8 @@ class FormTests(TestCase):
                             form.errors["event_title"])
 
     def test_event_time_overlap(self):
-                self.client.post(reverse("signup"), {
-                    "email": "test@gmail.com",
-                    "username": "test",
-                    "pwd": "testing213",
-                    "confirm_pwd": "testing213",
-                })
-                new_emp = User.objects.get(email="test@gmail.com")
+                self.client.post(reverse("signup"), self.user_data)
+                new_emp = User.objects.get(email=self.user_data["email"])
                 Employee.objects.create(
                     email=new_emp,
                     can_approve_req=0,
@@ -197,58 +182,54 @@ class ViewTests(TestCase):
     }
     #functional test
     def test_signup(self):
-        self.client.post(reverse("signup"), {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        })
-        user_data = {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        }
-        test_user = User.objects.get(email="test@gmail.com")
-        self.assertEqual(test_user.email, user_data['email'])
-        self.assertEqual(test_user.username, user_data["username"])
-        self.assertTrue(check_password(user_data["pwd"], test_user.password))
+        self.client.post(reverse("signup"), self.user_data)
+        test_user = User.objects.get(email=self.user_data["email"])
+        self.assertEqual(test_user.email, self.user_data["email"])
+        self.assertEqual(test_user.username, self.user_data["username"])
+        self.assertTrue(check_password(self.user_data["pwd"], test_user.password))
+
+    def test_login(self):
+        self.client.post(reverse("signup"), self.user_data)
+        self.client.post(reverse("login"), self.user_data)
+        _email = self.client.session.get("current_user")
+        self.assertEqual(_email, self.user_data["email"])
 
     #functional and security test
     def test_signup_reject_duplicate_account(self):
-        new_user = self.client.post(reverse("signup"), {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        })
-        duplicate_new_user = self.client.post(reverse("signup"), {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        })
+        self.client.post(reverse("signup"), self.user_data)
+        self.client.post(reverse("signup"), self.user_data)
         user_count = User.objects.filter(
-            email="test@gmail.com",
-            username="test",
+            email=self.user_data["email"],
+            username=self.user_data["username"],
         ).count()
         self.assertEqual(user_count, 1)
 
     def test_signup_reject_duplicate_username(self):
-        new_user = self.client.post(reverse("signup"), {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        })
-        duplicate_username = self.client.post(reverse("signup"), {
+        self.client.post(reverse("signup"), self.user_data)
+        duplicate_user_data = {
+            **self.user_data,
             "email": "test2@gmail.com",
-            "username": "test",
             "pwd": "testing456",
             "confirm_pwd": "testing456",
-        })
+        }
+        self.client.post(reverse("signup"), duplicate_user_data)
         user_count = User.objects.filter(
-            username="test",
+            username=self.user_data["username"],
+        ).count()
+        self.assertEqual(user_count, 1)
+
+    def test_signup_reject_duplicate_email(self):
+        self.client.post(reverse("signup"), self.user_data)
+        duplicate_email_data = {
+            "email": "test@gmail.com",
+            "username": "new_test",
+            "pwd": "testing12345",
+            "confirm_pwd": "testing12345",
+        }
+        self.client.post(reverse("signup"), duplicate_email_data)
+        user_count = User.objects.filter(
+            email=self.user_data["email"],
+            username=self.user_data["username"],
         ).count()
         self.assertEqual(user_count, 1)
 
@@ -288,25 +269,14 @@ class ViewTests(TestCase):
         self.assertTemplateUsed(result,"artTubeApp/logout.html")
 
     def test_restrict_access_emp_dashboard_after_logout(self):
-        self.client.post(reverse("signup"), {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        })
-        user_data = {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        }
-        new_emp = User.objects.get(email="test@gmail.com")
+        self.client.post(reverse("signup"), self.user_data)
+        new_emp = User.objects.get(email=self.user_data["email"])
         Employee.objects.create(
             email=new_emp,
             can_approve_req=0,
         )
         current_session = self.client.session
-        current_session["current_user"] = user_data["email"]
+        current_session["current_user"] = self.user_data["email"]
         current_session.save()
 
         result = self.client.get(reverse("logout"))
@@ -316,63 +286,30 @@ class ViewTests(TestCase):
 
     #security test
     def test_restrict_user_access_emp_dashboard(self):
-        new_user = self.client.post(reverse("signup"), {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        })
-        user_data = {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        }
+        self.client.post(reverse("signup"), self.user_data)
         current_session = self.client.session
-        current_session["current_user"] = user_data["email"]
+        current_session["current_user"] = self.user_data["email"]
         current_session.save()
         result = self.client.get(reverse("employee"))
         self.assertRedirects(result,"/")
 
     #security test
     def test_allow_emp_access_emp_dashboard(self):
-        self.client.post(reverse("signup"), {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        })
-        user_data = {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        }
-        new_emp = User.objects.get(email="test@gmail.com")
+        self.client.post(reverse("signup"), self.user_data)
+        new_emp = User.objects.get(email=self.user_data["email"])
         Employee.objects.create(
             email=new_emp,
             can_approve_req=0,
         )
         current_session = self.client.session
-        current_session["current_user"] = user_data["email"]
+        current_session["current_user"] = self.user_data["email"]
         current_session.save()
         result = self.client.get(reverse("employee"))
         self.assertTemplateUsed(result,"artTubeApp/emp_dash.html")
 
     def test_allow_admin_access_admin_dashboard(self):
-        self.client.post(reverse("signup"), {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        })
-        user_data = {
-            "email": "test@gmail.com",
-            "username": "test",
-            "pwd": "testing213",
-            "confirm_pwd": "testing213",
-        }
-        user = User.objects.get(email="test@gmail.com")
+        self.client.post(reverse("signup"), self.user_data)
+        user = User.objects.get(email=self.user_data["email"])
         employee = Employee.objects.create(
             email=user,
             can_approve_req=0,
@@ -386,24 +323,32 @@ class ViewTests(TestCase):
             secure_a2="answer",
         )
         current_session = self.client.session
-        current_session["current_user"] = user_data["email"]
+        current_session["current_user"] = self.user_data["email"]
         current_session.save()
         result = self.client.get(reverse("admin"))
         self.assertTemplateUsed(result,"artTubeApp/admin_dash.html")
 
-    # def test_restrict_user_access_admin_dashboard(self):
-    #     self.client.post(reverse("signup"), self.user_data)
-    #     current_session = self.client.session
-    #     current_session["current_user"] = self.user_data["email"]
-    #     current_session.save()
-    #     result = self.client.get(reverse("admin"))
-    #     # *STILL NEED TO IMPLEMENT* - restrict user access to admin dash
-    #     self.assertRedirects(result,"/")
+    def test_restrict_user_access_admin_dashboard(self):
+        self.client.post(reverse("signup"), self.user_data)
+        current_session = self.client.session
+        current_session["current_user"] = self.user_data["email"]
+        current_session.save()
+        result = self.client.get(reverse("admin"))
+        self.assertRedirects(result,"/")
 
-    #def test_restrict_emp_access_admin_dashboard(self):
-
+    def test_restrict_emp_access_admin_dashboard(self):
+        self.client.post(reverse("signup"), self.user_data)
+        new_emp = User.objects.get(email=self.user_data["email"])
+        Employee.objects.create(
+            email=new_emp,
+            can_approve_req=0,
+        )
+        current_session = self.client.session
+        current_session["current_user"] = self.user_data["email"]
+        current_session.save()
+        result = self.client.get(reverse("admin"))
+        self.assertRedirects(result,"/")
 
 
 
          
-

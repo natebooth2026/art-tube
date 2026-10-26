@@ -80,7 +80,7 @@ def emp_dashboard(request):
                     "event_start",
                     "event_end",
                 ))
-        #email is associated with an employees acount
+        #must be exployee to access employee dash
         if _Employee.objects.filter(email=_email).exists(): 
             if request.method == 'GET':
                 return render(request, 'artTubeApp/emp_dash.html', {'events': events, 'form': form})
@@ -124,7 +124,12 @@ def emp_dashboard(request):
 
 def admin_dashboard(request):
     if request.session.get('current_user'):
-        return render(request, 'artTubeApp/admin_dash.html')
+        _email = request.session.get('current_user')
+        if _Admin.objects.filter(email=_email).exists(): #myst be an admin to access admin_dash
+            return render(request, 'artTubeApp/admin_dash.html')
+        else:
+            #redirect to home page
+            return redirect('/')
     else:
         return redirect('/login?next=/admin/')
 
