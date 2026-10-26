@@ -1,0 +1,37 @@
+{% load static %}
+<html>
+    <head>
+        <title>ArtTube Canvas</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Workbench&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="{% static 'canvas.css' %}">
+    </head>
+    <body>
+        <div class="mx-auto p-2" style="width: 200px; font-family: Workbench, sans-serif;">
+            <h1 style="font-size: 3rem;">ArtTube</h1>
+        </div>
+        {% include 'artTubeApp/navbar.html' %}
+        <hr>
+        <h1>ArtTube Canvas</h1>
+        <a href="{% url 'studio' %}"><button>Go Back</button></a>
+        <br /><br />
+        <h3>Denied Requests</h3>
+        <b>Click to see denial reason.</b>
+        <br /><br />
+        {% if request_len > 0 %}
+            {% for r in requests %}
+                {% if r.denied == 1 %}
+                    <div class="piece">
+                        <a href="{% url 'studio_req_view' r.id %}"><img src="data:image/*; base64,{{ r.img_b64 }}" alt="{{ r.img_title }}" style="max-width: 200px;"></a>
+                        <p class="studio_item_title">Title: {{ r.img_title }}</p>
+                        <p class="studio_item_title">Title: {{ r.img_category.name }}</p>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <i>No requests have been denied yet!</i>
+        {% endif %}
+    </body>
+</html>

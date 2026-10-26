@@ -11,6 +11,8 @@
             <a href="{% url 'login' %}" class="link-underline-primary">Login</a>
             <a href="{% url 'signup' %}" class="link-underline-primary">Sign Up</a>
         {% else %}
+            <button>Change Password</button>
+            <button>Enable MFA</button>
             <a href="{% url 'logout' %}"><button>Log Out</button></a>
         {% endif %}
     </div>

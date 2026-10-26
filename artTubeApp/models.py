@@ -11,6 +11,7 @@ from django.db import models
 
 class Admin(models.Model):
     email = models.OneToOneField('User', models.DO_NOTHING, db_column='email')
+    admin_id = models.AutoField(primary_key=True)
     employee = models.ForeignKey('Employee', models.DO_NOTHING)
     secure_q1 = models.CharField(max_length=255)
     secure_q2 = models.CharField(max_length=255)
@@ -18,7 +19,7 @@ class Admin(models.Model):
     secure_a2 = models.CharField(max_length=255)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'admin'
 
 
@@ -95,7 +96,7 @@ class Category(models.Model):
     name = models.CharField(max_length=30)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'category'
 
 
@@ -150,7 +151,7 @@ class Employee(models.Model):
     can_approve_req = models.IntegerField()
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'employee'
 
 
@@ -171,7 +172,7 @@ class Log(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'log'
 
 
@@ -194,10 +195,10 @@ class Request(models.Model):
     admin_approve = models.IntegerField()
     denied = models.IntegerField()
     denial_reason = models.CharField(max_length=255, blank=True, null=True)
-    time = models.DateTimeField()
+    time = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'request'
 
     def img_b64(self):
@@ -216,13 +217,13 @@ class Submissions(models.Model):
     approved_category = models.ForeignKey(Category, models.DO_NOTHING, db_column='approved_category')
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'submissions'
 
     def img_b64(self):
-            if self.img:
-                return b64encode(bytes(self.img)).decode('utf-8')
-            return None
+        if self.img:
+            return b64encode(bytes(self.img)).decode('utf-8')
+        return None
 
 
 class User(models.Model):
@@ -234,5 +235,5 @@ class User(models.Model):
     number_2fa = models.IntegerField(db_column='2FA')  # Field name made lowercase. Field renamed because it wasn't a valid Python identifier.
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'user'
