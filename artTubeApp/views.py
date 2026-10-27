@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils.http import url_has_allowed_host_and_scheme
 from datetime import timedelta, datetime, UTC
+from django.conf import settings
 
 from .forms import account_creation, account_validate, sub_request_form, add_event, account_validate_emailMFA
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
@@ -126,7 +127,7 @@ def emp_dashboard(request):
             send_mail(
                 "ArtTube Verification code",
                 f"code is {code}",
-                None,  # Uses DEFAULT_FROM_EMAIL if configured
+                settings.EMAIL_HOST_USER,  # Uses DEFAULT_FROM_EMAIL if configured
                 [email],
                 fail_silently=False,
             )
@@ -134,17 +135,21 @@ def emp_dashboard(request):
             return render(request, 'artTubeApp/validate_email_MFA.html', {'form': form})
         else:
             return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
-    elif request.method == 'POST':
+    elif request.method == 'POST' :
         form = account_validate_emailMFA(request.POST)
         if form.is_valid():
-            email_code = form.cleaned_data.get('email_code')
-            code = request.session.get("employee_code")
-            #compare with code that was sent
-            if email_code == code:
-                return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
-            else:
-                is_emp = False
-                return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
+            if request.POST.get("action") == "next":
+                email_code = form.cleaned_data.get('email_code')
+                code = request.session.get("employee_code")
+                #compare with code that was sent
+                if email_code == code:
+                    return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
+                else:
+                    is_emp = False
+                    return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
+        else: #resend button clicked
+            return redirect('employee') #redirects and resends email
+                
 
 def emp_events(request):
     if request.session.get('current_user'):
@@ -213,7 +218,7 @@ def admin_dashboard(request):
                 send_mail(
                     "ArtTube Verification code",
                     f"code is {code}",
-                    None,  # Uses DEFAULT_FROM_EMAIL if configured
+                    settings.EMAIL_HOST_USER,  # Uses DEFAULT_FROM_EMAIL if configured
                     [email],
                     fail_silently=False,
                 )
@@ -224,14 +229,18 @@ def admin_dashboard(request):
     elif request.method == 'POST':
         form = account_validate_emailMFA(request.POST)
         if form.is_valid():
-            email_code = form.cleaned_data.get('email_code')
-            code = request.session.get("employee_code")
-            #compare with code that was sent
-            if email_code == code:
-                return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
-            else:
-                is_admin = False
-                return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
+            #user submits code
+            if request.POST.get("action") == "next":
+                email_code = form.cleaned_data.get('email_code')
+                code = request.session.get("employee_code")
+                #compare with code that was sent
+                if email_code == code:
+                    return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
+                else:
+                    is_admin = False
+                    return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
+        else: #user clicked resend code
+            return redirect('admin') #redirects and resends email
             
 def submit_request_page(request):
     if request.session.get('current_user'):

@@ -19,9 +19,9 @@
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <button>Resend Code</button>
+            <button type="Submit" name="action" value="resend" formnovalidate>Resend Code</button>
             <input type="hidden" name="next" value="{{ request.GET.next }}">
-            <button type="Submit">Next</button>
+            <button type="Submit" name="action" value="next">Next</button>
         </form>
     </div>
 </body>

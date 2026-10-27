@@ -126,11 +126,13 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+STATIC_URL = '/static/'
+EMAIL_BACKEND: 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'arttubegallery73@gmail.com' #sender's email-id
+EMAIL_HOST_PASSWORD = 'uotn rooz qoch yajk' #password associated with above email-id (not the regular password)
 
 # Login
 LOGIN_URL = 'login'
