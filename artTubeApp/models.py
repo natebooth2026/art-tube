@@ -13,10 +13,6 @@ class Admin(models.Model):
     email = models.OneToOneField('User', models.DO_NOTHING, db_column='email')
     admin_id = models.AutoField(primary_key=True)
     employee = models.ForeignKey('Employee', models.DO_NOTHING)
-    secure_q1 = models.CharField(max_length=255)
-    secure_q2 = models.CharField(max_length=255)
-    secure_a1 = models.CharField(max_length=255)
-    secure_a2 = models.CharField(max_length=255)
 
     class Meta:
         managed = False
@@ -158,10 +154,10 @@ class Employee(models.Model):
 class Events(models.Model):
     event_title = models.CharField(max_length=255)
     event_start = models.DateTimeField()
-    event_end = models.DateTimeField()
+    event_end = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'events'
 
 
@@ -181,12 +177,13 @@ class Occupancy(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'occupancy'
 
 
 class Request(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
+    employee_touch = models.IntegerField(blank=True, null=True)
     img = models.BinaryField()
     img_type = models.CharField(max_length=255)
     img_title = models.CharField(max_length=255)
@@ -195,7 +192,7 @@ class Request(models.Model):
     admin_approve = models.IntegerField()
     denied = models.IntegerField()
     denial_reason = models.CharField(max_length=255, blank=True, null=True)
-    time = models.DateTimeField(auto_now_add=True)
+    time = models.DateTimeField()
 
     class Meta:
         managed = False
@@ -233,6 +230,10 @@ class User(models.Model):
     admin_approve = models.IntegerField()
     locked = models.IntegerField()
     number_2fa = models.IntegerField(db_column='2FA')  # Field name made lowercase. Field renamed because it wasn't a valid Python identifier.
+    secure_q1 = models.CharField(max_length=255, blank=True, null=True)
+    secure_q2 = models.CharField(max_length=255, blank=True, null=True)
+    secure_a1 = models.CharField(max_length=255, blank=True, null=True)
+    secure_a2 = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         managed = False

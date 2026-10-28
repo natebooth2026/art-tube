@@ -71,7 +71,10 @@ class LogType(Enum):
     EMPLOYEE_FAILED_DISABLE_SECURE_Q = 63
     USER_FAILED_ACCESS_VIEW = 64
 
-def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
+def add_log(_event = LogType.NONE, _time = datetime.now(UTC), _givenTime = False, extra_info = []):
+    if not _givenTime:
+        _time = datetime.now(UTC)
+
     if _event is LogType.NONE or _event is LogType.empty1 or _event is LogType.empty2:
         _Log.objects.create(
             time=_time,
@@ -116,8 +119,7 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action="Failed to create an account",
-            email=extra_info[1]
+            action=f"Failed to create an account with email {extra_info[1]}",
         )
     elif _event is LogType.EMPLOYEE_ACCESS:
         _Log.objects.create(
@@ -144,7 +146,7 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action=f"Employee #{extra_info[2]} failed to create event with name {extra_info[3]}",
+            action=f"Employee #{extra_info[2]} failed to create event with name \"{extra_info[3]}\"",
             email=extra_info[1]
         )
     elif _event is LogType.EMPLOYEE_EVENT_MODIFY:
@@ -165,7 +167,7 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action=f"Employee #{extra_info[2]} approved request #{extra_info[3]}",
+            action=f"Employee #{extra_info[2]} approved request #{extra_info[3]} for submission",
             email=extra_info[1]
         )
     elif _event is LogType.EMPLOYEE_REQUEST_DENY:
@@ -263,7 +265,7 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action=f"Admin #{extra_info[2]} approved request #{extra_info[3]}",
+            action=f"Admin #{extra_info[2]} approved request #{extra_info[3]} for submission",
             email=extra_info[1]
         )
     elif _event is LogType.ADMIN_REQUEST_DENY:

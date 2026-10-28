@@ -19,9 +19,16 @@
                 <p class="alert alert-success" role="status">{{ confirmation }}</p>
             {% endif %}
             <form method="post">
-                {% csrf_token %}
-                {{ form.as_p }}
+                <div id = "event_add_form" style="display: inline-block">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                </div>
+                <div id="verify_form" style="display:inline-block">
+                    <h4>Verify</h4>
+                    {{ v_form.as_p }}
+                </div>
                 <input type="hidden" name="next" value="{{ request.GET.next }}">
+                <br />
                 <button type="Submit">Create Event</button>
             </form>
 
@@ -30,23 +37,24 @@
                 {% csrf_token %}
                 <label for="site-search">Search Past Events:</label>
                 <input type="search" id="site-search" name="query" />
-                <button name="search-events">Search</button>
+                <button name="search-events">Search/Refresh</button>
             </form>
             <table class="table table-bordered w-75 mx-auto">
                 <thead>
+                    <th scope="col">ID</th>
                     <th scope="col">Title</th>
-                    <th scope="col">Event Start</th>
-                    <th scope="col">Event End</th>
+                    <th scope="col">Start</th>
+                    <th scope="col">End</th>
                 </thead>
                 {% for event in events %}
                 <tbody>
+                        <td> {{ event.id }} </td>
                         <td> {{ event.event_title}} </td>
                         <td> {{event.event_start}} </td>
                         <td> {{event.event_end}} </td>
                 </tbody>
                 {% endfor %}
             </table>
-            Don't have an account? <a href="{% url 'signup' %}"><button>Go to Sign Up</button></a>
         </div>
     </body>
 </html>

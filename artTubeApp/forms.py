@@ -69,5 +69,12 @@ class sub_request_form(forms.Form):
 class add_event(forms.Form):
     event_title = forms.CharField(max_length=30)
     event_start = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), label="Start Date and Time")
-    event_end = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), label="End Date and Time")
+    event_end = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), label="End Date and Time", required=False)
+
+class request_decision(forms.Form):
+    decision = forms.ChoiceField((
+        ("1", "Approve"),
+        ("2", "Deny")
+    ))
+    denial_reason = forms.CharField(max_length=255)
 
