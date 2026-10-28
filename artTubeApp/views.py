@@ -1,11 +1,10 @@
 from base64 import b64encode #for image decoding
-from markupsafe import escape
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import make_password, check_password
 from datetime import timedelta, datetime, UTC
 
-from .forms import account_creation, account_validate, sub_request_form, add_event
+from .forms import account_creation, account_validate, sub_request_form, add_event, request_decision
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
 from .sanitize import sanitize_img
 from .log import add_log as _slog, LogType
@@ -17,6 +16,7 @@ def get_user(email):
 # Create your views here.
 
 def landing(request):
+    revoke_validations(request)
     return render(request, 'artTubeApp/index.html')
 
 def login(request):
@@ -47,6 +47,7 @@ def login(request):
 
 def logout(request):
     if request.session.get('current_user'):
+        revoke_validations(request)
         _slog(LogType.ACCOUNT_LOGOUT, extra_info=[request, get_user(request.session.get('current_user'))])
         del request.session['current_user']
         return render(request, 'artTubeApp/logout.html')
@@ -70,7 +71,7 @@ def signup(request):
                     form.add_error('email', 'Email already registered.')
                 else:
                     _User.objects.create(
-                        username=escape(username),
+                        username=username,
                         email=email,
                         password=pwd,
                         admin_approve=0,
@@ -83,6 +84,7 @@ def signup(request):
             form = account_creation()
         return render(request, 'artTubeApp/signup.html', {'form': form})
     else:
+        revoke_validations(request)
         return redirect('home')
 
 def revoke_validations(request):
@@ -193,8 +195,9 @@ def emp_requests_landing(request):
         if not request.session.get('validate_requests'):
             return redirect('/validate?next=/employee/requests')
         else:
-            _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(request.session.get('current_user')).id, "requests"])
-            requests = _Request.objects.filter(employee_touch=0, admin_approve=0).exclude(email=request.session.get('current_user'))
+            _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, "requests"])
+            requests = _Request.objects.filter(employee_touch__isnull=True, admin_approve=0, denied=0)
+            """.exclude(email=request.session.get('current_user'))"""
             return render(request, 'artTubeApp/emp_requests.html', {'reqs': requests})
     else:
         return redirect('/login?next=/employee/')
@@ -209,8 +212,14 @@ def emp_request_view(request, id = -1):
                 _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(request.session.get('current_user')).id, f"request #{id} view"])
                 return redirect('/employee/requests')
             elif _Request.objects.filter(id=id, email=request.session.get('current_user')):
-                _slog(LogType.USER_ACCESS_VIEW, extra_info=[request, get_user(request.session.get('current_user')), id])
-                return render(request, 'artTubeApp/studio_view.html', {'is_sub': False, 'item': _Request.objects.get(id=id), 'category': _Request.objects.get(id=id).img_category.name})
+                if request.method == 'GET':
+                    _slog(LogType.USER_ACCESS_VIEW, extra_info=[request, get_user(request.session.get('current_user')), id])
+                    form1 = request_decision()
+                    form2 = account_validate()
+                elif request.method == "POST":
+                    form1 = request_decision(request.POST)
+                    form2 = account_validate(request.POST)
+                return render(request, 'artTubeApp/emp_view.html', {'item': _Request.objects.get(id=id), 'category': _Request.objects.get(id=id).img_category.name, 'd_form': form1, 'v_form': form2})
             else:
                 _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(request.session.get('current_user')).id, f"request #{id} view"])
                 return redirect('/employee/requests')
@@ -233,14 +242,11 @@ def admin_dashboard(request):
         return redirect('/login?next=/admin/')
 
 def validate(request):
-    if request.session.get('validate_emp_admin'):
-        next_page = request.POST.get('next') or request.GET.get('next') or '/'
-        return redirect(next_page)
-    else:
-        if request.method == 'GET':
+    if request.session.get('current_user'):
+        if request.method == 'GET' and _Employee.objects.filter(email=request.session.get('current_user')).exists():
             form = account_validate()
             _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, "validation"])
-        if request.method == 'POST':
+        if request.method == 'POST' and _Employee.objects.filter(email=request.session.get('current_user')).exists():
             next_page = request.POST.get('next') or request.GET.get('next') or '/'
             form = account_validate(request.POST)
             if form.is_valid():
@@ -270,6 +276,10 @@ def validate(request):
                         elif next_page == "/admin/roles":
                             request.session['validate_roles'] = True
                         return redirect(next_page)
+        if not _Employee.objects.filter(email=request.session.get('current_user')).exists():
+            return redirect('employee')
+    else:
+        return redirect('/login?next=/employee/')
             
     return render(request, 'artTubeApp/validate_email_pass.html', {'form': form})
 
@@ -342,8 +352,8 @@ def submit_request_page(request):
                                     email=user,
                                     img=_img,
                                     img_type=img_ext,
-                                    img_title=escape(_title),
-                                    img_desc=escape(_desc),
+                                    img_title=_title,
+                                    img_desc=_desc,
                                     img_category=_category,
                                     admin_approve=user.admin_approve,
                                     denied=0,

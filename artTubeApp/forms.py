@@ -72,9 +72,15 @@ class add_event(forms.Form):
     event_end = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), label="End Date and Time", required=False)
 
 class request_decision(forms.Form):
-    decision = forms.ChoiceField((
+    decision = forms.ChoiceField(choices=[
+        ("", "Decision..."),
         ("1", "Approve"),
         ("2", "Deny")
-    ))
-    denial_reason = forms.CharField(max_length=255)
+    ], required=True)
+    category = CategoryChoiceField(
+        queryset=Category.objects.all(),
+        empty_label="Official Category...",
+        label = "Category (if approved)"
+    , required=False)
+    denial_reason = forms.CharField(max_length=255, required=False, label="If denied, explain:")
 
