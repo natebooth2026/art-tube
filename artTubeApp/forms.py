@@ -41,7 +41,7 @@ class CategoryChoiceField(forms.ModelChoiceField):
         return obj.name
 
 class sub_request_form(forms.Form):
-    img = forms.ImageField()
+    img = forms.ImageField(label="Artwork")
     title = forms.CharField(max_length=100)
     desc = forms.CharField(max_length=1000, required=False)
     category = CategoryChoiceField(
@@ -69,5 +69,18 @@ class sub_request_form(forms.Form):
 class add_event(forms.Form):
     event_title = forms.CharField(max_length=30)
     event_start = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), label="Start Date and Time")
-    event_end = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), label="End Date and Time")
+    event_end = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), label="End Date and Time", required=False)
+
+class request_decision(forms.Form):
+    decision = forms.ChoiceField(choices=[
+        ("", "Decision..."),
+        ("approve", "Approve"),
+        ("deny", "Deny")
+    ], required=True)
+    category = CategoryChoiceField(
+        queryset=Category.objects.all(),
+        empty_label="Official Category...",
+        label = "Category (if approved):",
+        required=False)
+    denial_reason = forms.CharField(max_length=255, required=False, label="If denied, explain:")
 

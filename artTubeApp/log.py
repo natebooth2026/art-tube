@@ -1,9 +1,8 @@
 from ipware import get_client_ip
-from .views import LogType
+from enum import Enum
 from .models import Log as _Log
 from datetime import datetime, UTC
 
-"""
 class LogType(Enum):
     NONE = -1
     ACCOUNT_LOGIN = 0
@@ -43,9 +42,39 @@ class LogType(Enum):
     ADMIN_REPORT_DENIED = 34
     ADMIN_FAILED_REPORT_DECISION = 35
     REPORT_FILED = 36
-"""
+    USER_ENTER_ROOM = 37
+    USER_LEAVE_ROOM = 38
+    USER_ENTER_GALLERY = 39
+    USER_LEAVE_GALLERY = 40
+    USER_ATTEMPT_INVALID_ENTER = 41
+    USER_VIEW_EVENT = 42
+    USER_CHANGE_PASSWORD = 43
+    USER_FAILED_CHANGE_PASSWORD = 44
+    USER_ENABLED_MFA = 45
+    USER_FAILED_ENABLE_MFA = 46
+    USER_DISABLED_MFA = 47
+    USER_FAILED_DISABLE_MFA = 48
+    USER_ENABLE_MFA_SECURE_Q = 49 #Failure --> see 46
+    EMPLOYEE_CHANGE_PASSWORD = 50
+    EMPLOYEE_FAILED_CHANGE_PASSWORD = 51
+    EMPLOYEE_ENABLE_SECURE_Q = 52
+    EMPLOYEE_FAILED_ENABLE_SECURE_Q = 53
+    EMPLOYEE_CHANGE_SECURE_Q = 54
+    EMPLOYEE_FAILED_CHANGE_SECURE_Q = 55
+    USER_CHANGE_SECURE_Q = 56
+    USER_FAILED_CHANGE_SECURE_Q = 57
+    ADMIN_CHANGE_PASSWORD = 58
+    ADMIN_FAILED_CHANGE_PASSWORD = 59
+    ADMIN_CHANGE_SECURE_Q = 60
+    ADMIN_FAILED_CHANGE_SECURE_Q = 61
+    EMPLOYEE_DISABLED_SECURE_Q = 62
+    EMPLOYEE_FAILED_DISABLE_SECURE_Q = 63
+    USER_FAILED_ACCESS_VIEW = 64
 
-def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
+def add_log(_event = LogType.NONE, _time = datetime.now(UTC), _givenTime = False, extra_info = []):
+    if not _givenTime:
+        _time = datetime.now(UTC)
+
     if _event is LogType.NONE or _event is LogType.empty1 or _event is LogType.empty2:
         _Log.objects.create(
             time=_time,
@@ -70,7 +99,7 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action=f"Attempted to login to non-existant account ({extra_info[1]})"
+            action=f"Attempted action to non-existant account ({extra_info[1]})"
         )
     elif _event is LogType.ACCOUNT_LOGOUT:
         _Log.objects.create(
@@ -86,12 +115,11 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
             action="Successfully created account",
             email=extra_info[1]
         )
-    elif _event is LogType.ACCOUNT_FAILED_LOGIN:
+    elif _event is LogType.ACCOUNT_FAILED_CREATE:
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action="Failed to create an account",
-            email=extra_info[1]
+            action=f"Failed to create an account with email {extra_info[1]}",
         )
     elif _event is LogType.EMPLOYEE_ACCESS:
         _Log.objects.create(
@@ -118,7 +146,7 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action=f"Employee #{extra_info[2]} failed to create event with name {extra_info[3]}",
+            action=f"Employee #{extra_info[2]} failed to create event with name \"{extra_info[3]}\"",
             email=extra_info[1]
         )
     elif _event is LogType.EMPLOYEE_EVENT_MODIFY:
@@ -139,7 +167,7 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action=f"Employee #{extra_info[2]} approved request #{extra_info[3]}",
+            action=f"Employee #{extra_info[2]} approved request #{extra_info[3]} for submission",
             email=extra_info[1]
         )
     elif _event is LogType.EMPLOYEE_REQUEST_DENY:
@@ -163,6 +191,62 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
             action=f"Employee #{extra_info[2]} attempted to access admin portal",
             email=extra_info[1]
         )
+    elif _event is LogType.EMPLOYEE_CHANGE_PASSWORD:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Employee #{extra_info[2]} successfully changed password",
+            email=extra_info[1]
+        )
+    elif _event is LogType.EMPLOYEE_FAILED_CHANGE_PASSWORD:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Employee #{extra_info[2]} failed to change password",
+            email=extra_info[1]
+        )
+    elif _event is LogType.EMPLOYEE_ENABLE_SECURE_Q:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Employee #{extra_info[2]} successfully enabled secure questions",
+            email=extra_info[1]
+        )
+    elif _event is LogType.EMPLOYEE_DISABLED_SECURE_Q:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Employee #{extra_info[2]} successfully disabled secure questions",
+            email=extra_info[1]
+        )
+    elif _event is LogType.EMPLOYEE_FAILED_ENABLE_SECURE_Q:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Employee #{extra_info[2]} failed to enable secure questions",
+            email=extra_info[1]
+        )
+    elif _event is LogType.EMPLOYEE_FAILED_DISABLE_SECURE_Q:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Employee #{extra_info[2]} failed to disable secure questions",
+            email=extra_info[1]
+        )
+    elif _event is LogType.EMPLOYEE_CHANGE_SECURE_Q:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Employee #{extra_info[2]} successfully changed secure question #{extra_info[3]}",
+            email=extra_info[1]
+        )
+    elif _event is LogType.EMPLOYEE_FAILED_CHANGE_SECURE_Q:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Employee #{extra_info[2]} failed to change secure question #{extra_info[3]}",
+            email=extra_info[1]
+        )
     elif _event is LogType.ADMIN_ACCESS:
         _Log.objects.create(
             time=_time,
@@ -181,7 +265,7 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action=f"Admin #{extra_info[2]} approved request #{extra_info[3]}",
+            action=f"Admin #{extra_info[2]} approved request #{extra_info[3]} for submission",
             email=extra_info[1]
         )
     elif _event is LogType.ADMIN_REQUEST_DENY:
@@ -233,3 +317,214 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), extra_info = []):
             action=f"Admin #{extra_info[2]} failed to switch role of user #{extra_info[3]} from {extra_info[4]} to {extra_info[5]}",
             email=extra_info[1]
         )
+    elif _event is LogType.ADMIN_CHANGE_PASSWORD:
+         _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Admin #{extra_info[2]} successfully changed password",
+            email=extra_info[1]
+        )
+    elif _event is LogType.ADMIN_FAILED_CHANGE_PASSWORD:
+         _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Admin #{extra_info[2]} failed to change password",
+            email=extra_info[1]
+        )
+    elif _event is LogType.ADMIN_CHANGE_SECURE_Q:
+         _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Admin #{extra_info[2]} successfully changed secure question #{extra_info[3]}",
+            email=extra_info[1]
+        )
+    elif _event is LogType.ADMIN_FAILED_CHANGE_SECURE_Q:
+         _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"Admin #{extra_info[2]} failed to change secure question #{extra_info[3]}",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_SUBMIT_REQUEST:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User created a new request",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_ATTEMPT_REQUEST:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User attempted to create a new request before the end of the cooldown",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_FAILED_REQUEST:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User failed to create a new request",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_ACCESS_VIEW:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User accessed view of request/submission #{extra_info[2]}",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_FAILED_ACCESS_VIEW:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User failed to access view of request/submission #{extra_info[2]}",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_ACCESS_STUDIO:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User accessed the canvas",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_CHANGE_SUBMISSION:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User changed submission #{extra_info[2]} visibility from {extra_info[4]} to {extra_info[5]}",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_ATTEMPT_EMP_DASHBOARD:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User attempted to access employee dashboard",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_ATTEMPT_ADMIN_PORTAL:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User attempted to access admin portal",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_ENTER_ROOM:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User/guest entered room \"{extra_info[2]}\"",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_LEAVE_ROOM:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User/guest left room \"{extra_info[2]}\"",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_ENTER_GALLERY:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User/guest entered the gallery",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_LEAVE_GALLERY:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User/guest left the gallery",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_ATTEMPT_INVALID_ENTER:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User/guest attempted to enter \"{extra_info[2]}\" while in room \"{extra_info[4]}\"",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_VIEW_EVENT:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User/guest viewed event #{extra_info[2]}",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_CHANGE_PASSWORD:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User successfully changed password",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_FAILED_CHANGE_PASSWORD:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User failed to change password",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_ENABLED_MFA:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User successfully enabled MFA",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_ENABLE_MFA_SECURE_Q:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User successfully enabled MFA and secure questions",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_FAILED_ENABLE_MFA:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User failed to enable MFA",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_DISABLED_MFA:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User successfully disabled MFA",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_FAILED_DISABLE_MFA:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User failed to disable MFA",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_CHANGE_SECURE_Q:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User successfully changed secure question #{extra_info[2]}",
+            email=extra_info[1]
+        )
+    elif _event is LogType.USER_FAILED_CHANGE_SECURE_Q:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User failed to change secure question #{extra_info[2]}",
+            email=extra_info[1]
+        )
+    elif _event is LogType.REPORT_FILED:
+        if extra_info[1] is not None:
+            _Log.objects.create(
+                time=_time,
+                ip=get_client_ip(extra_info[0]),
+                action=f"Report was filed on submission #{extra_info[2]}",
+                email=extra_info[1]
+            )
+    else:
+        _Log.objects.create(
+            time=_time,
+            ip="-1.-1.-1.-1",
+            action="LOG ERROR: Unknown type"
+        )
+    

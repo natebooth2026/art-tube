@@ -1,5 +1,6 @@
 Django==6.1.1
 djangorestframework==3.18.1
 mysqlclient==2.3.0
+django-ipware
 python-magic
 Pillow

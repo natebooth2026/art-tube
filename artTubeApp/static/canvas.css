@@ -6,4 +6,5 @@
     border-style:dashed;
     padding: 10px;
     border-color: black;
+    max-width: 300px;
 }

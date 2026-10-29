@@ -32,8 +32,12 @@ urlpatterns = [
     path('canvas/request/wait', views.request_wait, name='studio_wait_req'),
     path('canvas/denied_requests', views.denied_reqs, name='studio_denied_reqs'),
     path('employee/', views.emp_dashboard, name='employee'),
+    path('employee/events', views.emp_events, name='emp_events'),
+    path('employee/requests', views.emp_requests_landing, name="emp_requests"),
+    path('employee/requests/<int:id>', views.emp_request_view, name="emp_req_view"),
     path('admin/', views.admin_dashboard, name='admin'),
     path('gallery/', views.gallery, name='gallery'),
     path('events/', views.events, name='events'),
+    path('validate/', views.validate, name='verify')
 ]
 

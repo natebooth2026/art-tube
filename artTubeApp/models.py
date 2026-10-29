@@ -13,10 +13,6 @@ class Admin(models.Model):
     email = models.OneToOneField('User', models.DO_NOTHING, db_column='email')
     admin_id = models.AutoField(primary_key=True)
     employee = models.ForeignKey('Employee', models.DO_NOTHING)
-    secure_q1 = models.CharField(max_length=255)
-    secure_q2 = models.CharField(max_length=255)
-    secure_a1 = models.CharField(max_length=255)
-    secure_a2 = models.CharField(max_length=255)
 
     class Meta:
         managed = True
@@ -149,6 +145,7 @@ class Employee(models.Model):
     email = models.OneToOneField('User', models.DO_NOTHING, db_column='email')
     employee_id = models.AutoField(primary_key=True)
     can_approve_req = models.IntegerField()
+    deactivated = models.IntegerField()
 
     class Meta:
         managed = True
@@ -158,17 +155,17 @@ class Employee(models.Model):
 class Events(models.Model):
     event_title = models.CharField(max_length=255)
     event_start = models.DateTimeField()
-    event_end = models.DateTimeField()
+    event_end = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'events'
 
 
 class Log(models.Model):
     time = models.DateTimeField()
     ip = models.CharField(max_length=45)
-    action = models.CharField(max_length=255)
+    action = models.CharField(max_length=1000)
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:
@@ -181,13 +178,14 @@ class Occupancy(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'occupancy'
 
 
 class Request(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
-    img = models.BinaryField()
+    employee_touch = models.IntegerField(blank=True, null=True)
+    img = models.TextField()
     img_type = models.CharField(max_length=255)
     img_title = models.CharField(max_length=255)
     img_desc = models.CharField(max_length=1000)
@@ -195,7 +193,7 @@ class Request(models.Model):
     admin_approve = models.IntegerField()
     denied = models.IntegerField()
     denial_reason = models.CharField(max_length=255, blank=True, null=True)
-    time = models.DateTimeField(auto_now_add=True)
+    time = models.DateTimeField()
 
     class Meta:
         managed = True
@@ -210,11 +208,12 @@ class Request(models.Model):
 class Submissions(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
     approval_emp = models.ForeignKey(Employee, models.DO_NOTHING)
-    img = models.BinaryField()
+    img = models.TextField()
     img_type = models.CharField(max_length=255)
     img_title = models.CharField(max_length=255)
     img_desc = models.CharField(max_length=1000)
     approved_category = models.ForeignKey(Category, models.DO_NOTHING, db_column='approved_category')
+    admin_review = models.ForeignKey(Admin, models.DO_NOTHING, db_column='admin_review', blank=True, null=True)
 
     class Meta:
         managed = True
@@ -233,6 +232,10 @@ class User(models.Model):
     admin_approve = models.IntegerField()
     locked = models.IntegerField()
     number_2fa = models.IntegerField(db_column='2FA')  # Field name made lowercase. Field renamed because it wasn't a valid Python identifier.
+    secure_q1 = models.CharField(max_length=255, blank=True, null=True)
+    secure_q2 = models.CharField(max_length=255, blank=True, null=True)
+    secure_a1 = models.CharField(max_length=255, blank=True, null=True)
+    secure_a2 = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         managed = True
