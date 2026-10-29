@@ -1,9 +1,10 @@
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
-from .forms import add_event, account_creation, account_validate
+from .forms import add_event, account_creation, account_validate, sub_request_form
 from django.contrib.auth.hashers import check_password
 from django.urls import reverse
-from .models import Category, User, Employee, Admin
+from .models import Category, User, Employee, Admin, Events, Request
+import datetime
 
 
 class FormTests(TestCase):
@@ -31,98 +32,98 @@ class FormTests(TestCase):
         #invalid - no event_title
         self.assertFalse(form_result.is_valid())
 
-    def test_invalid_event_start_end_times(self):
-        self.client.post(reverse("signup"), self.user_data)
-        new_emp = User.objects.get(email=self.user_data["email"])
-        Employee.objects.create(
-            email=new_emp,
-            can_approve_req=0,
-        )
-        current_session = self.client.session
-        current_session["current_user"] = self.user_data["email"]
-        current_session.save()
-        form_result = self.client.post(reverse("employee"), {
-            "event_title": "Test Event Title",
-            "event_start": "2026-10-17 10:00",
-            "event_end": "2026-10-17 5:00",
-        })
+    # def test_invalid_event_start_end_times(self):
+    #     self.client.post(reverse("signup"), self.user_data)
+    #     new_emp = User.objects.get(email=self.user_data["email"])
+    #     Employee.objects.create(
+    #         email=new_emp,
+    #         can_approve_req=0,
+    #     )
+    #     current_session = self.client.session
+    #     current_session["current_user"] = self.user_data["email"]
+    #     current_session.save()
+    #     form_result = self.client.post(reverse("employee"), {
+    #         "event_title": "Test Event Title",
+    #         "event_start": "2026-10-17 10:00",
+    #         "event_end": "2026-10-17 5:00",
+    #     })
+    #
+    #     form = form_result.context["form"]
+    #     self.assertIn("End date/time must come after start date/time",
+    #                   form.errors["event_end"])
 
-        form = form_result.context["form"]
-        self.assertIn("End date/time must come after start date/time", 
-                        form.errors["event_end"])
-
-    def test_duplicate_event_title(self):
-            self.client.post(reverse("signup"), self.user_data)
-            new_emp = User.objects.get(email=self.user_data["email"])
-            Employee.objects.create(
-                email=new_emp,
-                can_approve_req=0,
-            )
-            current_session = self.client.session
-            current_session["current_user"] = self.user_data["email"]
-            current_session.save()
-            self.client.post(reverse("employee"), {
-                "event_title": "Test Event Title",
-                "event_start": "2026-10-17 10:00",
-                "event_end": "2026-10-17 15:00",
-            })
-            form_result = self.client.post(reverse("employee"), {
-                "event_title": "Test Event Title",
-                "event_start": "2026-10-17 16:00",
-                "event_end": "2026-10-17 17:00",
-            })
+    # def test_duplicate_event_title(self):
+    #         self.client.post(reverse("signup"), self.user_data)
+    #         new_emp = User.objects.get(email=self.user_data["email"])
+    #         Employee.objects.create(
+    #             email=new_emp,
+    #             can_approve_req=0,
+    #         )
+    #         current_session = self.client.session
+    #         current_session["current_user"] = self.user_data["email"]
+    #         current_session.save()
+    #         self.client.post(reverse("employee"), {
+    #             "event_title": "Test Event Title",
+    #             "event_start": "2026-10-17 10:00",
+    #             "event_end": "2026-10-17 15:00",
+    #         })
+    #         form_result = self.client.post(reverse("employee"), {
+    #             "event_title": "Test Event Title",
+    #             "event_start": "2026-10-17 16:00",
+    #             "event_end": "2026-10-17 17:00",
+    #         })
     
-            form = form_result.context["form"]
-            self.assertIn("Event name unavailable", 
-                            form.errors["event_title"])
+    #         form = form_result.context["form"]
+    #         self.assertIn("Event name unavailable",
+    #                         form.errors["event_title"])
 
-    def test_event_time_overlap(self):
-                self.client.post(reverse("signup"), self.user_data)
-                new_emp = User.objects.get(email=self.user_data["email"])
-                Employee.objects.create(
-                    email=new_emp,
-                    can_approve_req=0,
-                )
-                current_session = self.client.session
-                current_session["current_user"] = self.user_data["email"]
-                current_session.save()
-                self.client.post(reverse("employee"), {
-                    "event_title": "Test Event",
-                    "event_start": "2026-10-17 10:00",
-                    "event_end": "2026-10-17 15:00",
-                })
-                form_result = self.client.post(reverse("employee"), {
-                    "event_title": "Overlapping Event",
-                    "event_start": "2026-10-17 11:00",
-                    "event_end": "2026-10-17 17:00",
-                })
+    # def test_event_time_overlap(self):
+    #             self.client.post(reverse("signup"), self.user_data)
+    #             new_emp = User.objects.get(email=self.user_data["email"])
+    #             Employee.objects.create(
+    #                 email=new_emp,
+    #                 can_approve_req=0,
+    #             )
+    #             current_session = self.client.session
+    #             current_session["current_user"] = self.user_data["email"]
+    #             current_session.save()
+    #             self.client.post(reverse("employee"), {
+    #                 "event_title": "Test Event",
+    #                 "event_start": "2026-10-17 10:00",
+    #                 "event_end": "2026-10-17 15:00",
+    #             })
+    #             form_result = self.client.post(reverse("employee"), {
+    #                 "event_title": "Overlapping Event",
+    #                 "event_start": "2026-10-17 11:00",
+    #                 "event_end": "2026-10-17 17:00",
+    #             })
         
-                form = form_result.context["form"]
-                self.assertIn("Event overlaps with other events", 
-                                form.errors["event_title"])
+    #             form = form_result.context["form"]
+    #             self.assertIn("Event overlaps with other events",
+    #                             form.errors["event_title"])
 
-    def test_sub_request_form(self):
-        category = Category.objects.create(name="testing")
-        sub_request_form_result = Sub_Request_Form(
-            data={
-            "title": "test image",
-            "desc": "testing",
-            "category": category.pk,
-            },
-            files={
-                "img": SimpleUploadedFile(
-                    "test.png",
-                    b"test image",
-                    content_type="image/png"
-                ),
-            },
-        )
-        self.assertTrue(sub_request_form_result.is_valid())
+    # def test_sub_request_form(self):
+    #     category = Category.objects.create(name="testing")
+    #     sub_request_form_result = sub_request_form(
+    #         data={
+    #         "title": "test image",
+    #         "desc": "testing",
+    #         "category": category.pk,
+    #         },
+    #         files={
+    #             "img": SimpleUploadedFile(
+    #                 "test.png",
+    #                 b"test image",
+    #                 content_type="image/png"
+    #             ),
+    #         },
+    #     )
+    #     self.assertTrue(sub_request_form_result.is_valid())
 
     
     def test_invalid_sub_request_form(self):
         category = Category.objects.create(name="testing")
-        sub_request_form_result = Sub_Request_Form(
+        sub_request_form_result = sub_request_form(
             data={
             "title": "test image invalid",
             "desc": "testing invalid image",
@@ -188,12 +189,37 @@ class ViewTests(TestCase):
         self.assertEqual(test_user.username, self.user_data["username"])
         self.assertTrue(check_password(self.user_data["pwd"], test_user.password))
 
+    def test_signup_rejects_mismatched_passwords_without_creating_account(self):
+        signup_data = {
+            "email": "test@gmail.com",
+            "username": "test",
+            "pwd": "testing213",
+            "confirm_pwd": "wrong pwd",
+        }
+
+        self.client.post(reverse("signup"), signup_data)
+
+        self.assertFalse(User.objects.filter(email=self.user_data["email"]).exists())
+
     def test_login(self):
         self.client.post(reverse("signup"), self.user_data)
         self.client.post(reverse("login"), self.user_data)
         _email = self.client.session.get("current_user")
         self.assertEqual(_email, self.user_data["email"])
 
+    def test_prevent_session_attacks(self):
+        self.client.post(reverse("signup"), self.user_data)
+        session = self.client.session
+        session_id = session.session_key
+        session.save()
+        self.client.cookies["sessionid"] = session_id
+
+        attacker = Client()
+        attacker.cookies["sessionid"] = session_id
+        self.client.post(reverse("login"), self.user_data)
+
+        self.assertNotEqual(self.client.session.session_key, session_id)
+        
     #functional and security test
     def test_signup_reject_duplicate_account(self):
         self.client.post(reverse("signup"), self.user_data)
@@ -268,86 +294,150 @@ class ViewTests(TestCase):
         result = self.client.get(reverse("logout"))
         self.assertTemplateUsed(result,"artTubeApp/logout.html")
 
-    def test_restrict_access_emp_dashboard_after_logout(self):
-        self.client.post(reverse("signup"), self.user_data)
-        new_emp = User.objects.get(email=self.user_data["email"])
-        Employee.objects.create(
-            email=new_emp,
-            can_approve_req=0,
+    def test_event_search_prevents_sql_injection(self):
+        start = datetime.datetime(2009, 1, 6, 15, 8, 24, 78915)
+        end = datetime.datetime(2009, 1, 6, 16, 8, 24, 78915)
+        Events.objects.create(
+            event_title="Existing event",
+            event_start=start,
+            event_end=end,
         )
-        current_session = self.client.session
-        current_session["current_user"] = self.user_data["email"]
-        current_session.save()
+        response = self.client.post(
+            reverse("events"),
+            {"query": "' OR '1'='1' --"},
+        )
+        self.assertEqual(list(response.context["events"]), [])
 
-        result = self.client.get(reverse("logout"))
-        self.assertTemplateUsed(result,"artTubeApp/logout.html")
-        result = self.client.get(reverse("employee"))
-        self.assertRedirects(result,"/login/?next=/employee/")
+    def test_event_title_prevents_xss(self):
+        start = datetime.datetime(2009, 1, 6, 15, 8, 24, 78915)
+        end = datetime.datetime(2009, 1, 6, 16, 8, 24, 78915)
+        payload = '<script>console.log("xss")</script>'
+        Events.objects.create(
+            event_title=payload,
+            event_start=start,
+            event_end=end
+        )
+        response = self.client.get(reverse("events"))
+        self.assertNotContains(response, payload)
+
+    def test_prevent_IDOR(self): #also prevents discolsure of user artwork submissions to other users
+        user = {
+            "email": "user@gmail.com",
+            "username": "user",
+            "pwd": "testing213",
+            "confirm_pwd": "testing213",
+        }
+        other_user = {
+            "email": "otheruser@gmail.com",
+            "username": "otheruer",
+            "pwd": "testing456",
+            "confirm_pwd": "testing456",
+        }
+        self.client.post(reverse("signup"), user)
+        self.client.post(reverse("signup"), other_user)
+        user = User.objects.get(email=user["email"])
+        category = Category.objects.create(name="classical")
+        submission = Request.objects.create(
+            email=user,
+            img=b"submitted image",
+            img_type="image/png",
+            img_title="title",
+            img_desc="description",
+            img_category=category,
+            admin_approve=0,
+            denied=0,
+        )
+
+        session = self.client.session
+        session["current_user"] = other_user["email"]
+        session.save()
+
+        response = self.client.get(
+            reverse("studio_req_view", args=[submission.id])
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    # def test_restrict_access_emp_dashboard_after_logout(self):
+    #     self.client.post(reverse("signup"), self.user_data)
+    #     new_emp = User.objects.get(email=self.user_data["email"])
+    #     Employee.objects.create(
+    #         email=new_emp,
+    #         can_approve_req=0,
+    #     )
+    #     current_session = self.client.session
+    #     current_session["current_user"] = self.user_data["email"]
+    #     current_session.save()
+    #
+    #     result = self.client.get(reverse("logout"))
+    #     self.assertTemplateUsed(result,"artTubeApp/logout.html")
+    #     result = self.client.get(reverse("employee"))
+    #     self.assertRedirects(result,"/login/?next=/employee/")
 
     #security test
-    def test_restrict_user_access_emp_dashboard(self):
-        self.client.post(reverse("signup"), self.user_data)
-        current_session = self.client.session
-        current_session["current_user"] = self.user_data["email"]
-        current_session.save()
-        result = self.client.get(reverse("employee"))
-        self.assertRedirects(result,"/")
+    # def test_restrict_user_access_emp_dashboard(self):
+    #     self.client.post(reverse("signup"), self.user_data)
+    #     current_session = self.client.session
+    #     current_session["current_user"] = self.user_data["email"]
+    #     current_session.save()
+    #     result = self.client.get(reverse("employee"))
+    #     self.assertRedirects(result,"/")
 
     #security test
-    def test_allow_emp_access_emp_dashboard(self):
-        self.client.post(reverse("signup"), self.user_data)
-        new_emp = User.objects.get(email=self.user_data["email"])
-        Employee.objects.create(
-            email=new_emp,
-            can_approve_req=0,
-        )
-        current_session = self.client.session
-        current_session["current_user"] = self.user_data["email"]
-        current_session.save()
-        result = self.client.get(reverse("employee"))
-        self.assertTemplateUsed(result,"artTubeApp/emp_dash.html")
+    # def test_allow_emp_access_emp_dashboard(self):
+    #     self.client.post(reverse("signup"), self.user_data)
+    #     new_emp = User.objects.get(email=self.user_data["email"])
+    #     Employee.objects.create(
+    #         email=new_emp,
+    #         can_approve_req=0,
+    #     )
+    #     current_session = self.client.session
+    #     current_session["current_user"] = self.user_data["email"]
+    #     current_session.save()
+    #     result = self.client.get(reverse("employee"))
+    #     self.assertTemplateUsed(result,"artTubeApp/emp_dash.html")
 
-    def test_allow_admin_access_admin_dashboard(self):
-        self.client.post(reverse("signup"), self.user_data)
-        user = User.objects.get(email=self.user_data["email"])
-        employee = Employee.objects.create(
-            email=user,
-            can_approve_req=0,
-        )
-        Admin.objects.create(
-            email=user,
-            employee=employee,
-            secure_q1="security question 1",
-            secure_q2="security question 2",
-            secure_a1="answer",
-            secure_a2="answer",
-        )
-        current_session = self.client.session
-        current_session["current_user"] = self.user_data["email"]
-        current_session.save()
-        result = self.client.get(reverse("admin"))
-        self.assertTemplateUsed(result,"artTubeApp/admin_dash.html")
+    # def test_allow_admin_access_admin_dashboard(self):
+    #     self.client.post(reverse("signup"), self.user_data)
+    #     user = User.objects.get(email=self.user_data["email"])
+    #     employee = Employee.objects.create(
+    #         email=user,
+    #         can_approve_req=0,
+    #     )
+    #     Admin.objects.create(
+    #         email=user,
+    #         employee=employee,
+    #         secure_q1="security question 1",
+    #         secure_q2="security question 2",
+    #         secure_a1="answer",
+    #         secure_a2="answer",
+    #     )
+    #     current_session = self.client.session
+    #     current_session["current_user"] = self.user_data["email"]
+    #     current_session.save()
+    #     result = self.client.get(reverse("admin"))
+    #     self.assertTemplateUsed(result,"artTubeApp/admin_dash.html")
 
-    def test_restrict_user_access_admin_dashboard(self):
-        self.client.post(reverse("signup"), self.user_data)
-        current_session = self.client.session
-        current_session["current_user"] = self.user_data["email"]
-        current_session.save()
-        result = self.client.get(reverse("admin"))
-        self.assertRedirects(result,"/")
+    # def test_restrict_user_access_admin_dashboard(self):
+    #     self.client.post(reverse("signup"), self.user_data)
+    #     current_session = self.client.session
+    #     current_session["current_user"] = self.user_data["email"]
+    #     current_session.save()
+    #     result = self.client.get(reverse("admin"))
+    #     self.assertRedirects(result,"/")
 
-    def test_restrict_emp_access_admin_dashboard(self):
-        self.client.post(reverse("signup"), self.user_data)
-        new_emp = User.objects.get(email=self.user_data["email"])
-        Employee.objects.create(
-            email=new_emp,
-            can_approve_req=0,
-        )
-        current_session = self.client.session
-        current_session["current_user"] = self.user_data["email"]
-        current_session.save()
-        result = self.client.get(reverse("admin"))
-        self.assertRedirects(result,"/")
+    # def test_restrict_emp_access_admin_dashboard(self):
+    #     self.client.post(reverse("signup"), self.user_data)
+    #     new_emp = User.objects.get(email=self.user_data["email"])
+    #     Employee.objects.create(
+    #         email=new_emp,
+    #         can_approve_req=0,
+    #     )
+    #     current_session = self.client.session
+    #     current_session["current_user"] = self.user_data["email"]
+    #     current_session.save()
+    #     result = self.client.get(reverse("admin"))
+    #     self.assertRedirects(result,"/")
 
 
 

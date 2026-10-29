@@ -66,6 +66,7 @@ def login(request):
                 form.add_error('email', 'Email is not associated with an account. Please create a new account or try another email.')
             elif check_password(_password, users.password):
                 next_page = request.POST.get('next') or request.GET.get('next') or '/'
+                request.session.cycle_key()
                 request.session['current_user'] = users.email
                 return redirect(next_page)
             else:
