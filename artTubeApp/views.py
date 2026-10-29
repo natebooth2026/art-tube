@@ -218,6 +218,9 @@ def emp_requests_landing(request):
     else:
         return redirect('/login?next=/employee/')
 
+# def admin_has_req_access(id):
+#    return 
+
 def emp_request_view(request, id = -1):
     if request.session.get('current_user'):
         if not request.session.get('validate_requests'):
