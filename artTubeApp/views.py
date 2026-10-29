@@ -12,11 +12,16 @@ from .log import add_log as _slog, LogType
 #helper func
 def get_user(email):
     return _User.objects.get(email=email)
+
+def can_enter(request):
+    return not request.session.get('in_gallery')
     
 # Create your views here.
 
 def landing(request):
     revoke_validations(request)
+    if not can_enter(request):
+        return redirect('gallery')
     return render(request, 'artTubeApp/index.html')
 
 def login(request):
@@ -46,9 +51,14 @@ def login(request):
     return render(request, 'artTubeApp/login.html', {'form': form})
 
 def logout(request):
-    if request.session.get('current_user'):
+    if request.session.get('current_user') and _User.objects.filter(email=request.session.get('current_user')):
         revoke_validations(request)
         _slog(LogType.ACCOUNT_LOGOUT, extra_info=[request, get_user(request.session.get('current_user'))])
+        del request.session['current_user']
+        return render(request, 'artTubeApp/logout.html')
+    elif not _User.objects.filter(email=request.session.get('current_user')):
+        revoke_validations(request)
+        _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request, request.session.get('current_user')])
         del request.session['current_user']
         return render(request, 'artTubeApp/logout.html')
     else:
@@ -87,6 +97,11 @@ def signup(request):
         revoke_validations(request)
         return redirect('home')
 
+def remove_emp_touch(request):
+    employee_obj = _Employee.objects.get(email=request.session.get('current_user'))
+    if employee_obj:
+        _Request.objects.filter(employee_touch=employee_obj.employee_id).update(employee_touch=None)
+
 def revoke_validations(request):
     if _Admin.objects.filter(email=request.session.get('current_user')).exists():
         request.session['validate_requests'] = False
@@ -96,6 +111,7 @@ def revoke_validations(request):
     elif _Employee.objects.filter(email=request.session.get('current_user')).exists():
         request.session['validate_requests'] = False
         request.session['validate_events'] = False
+        remove_emp_touch(request)
 
 def emp_dashboard(request):
     if request.session.get('current_user'):
@@ -196,30 +212,86 @@ def emp_requests_landing(request):
             return redirect('/validate?next=/employee/requests')
         else:
             _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, "requests"])
-            requests = _Request.objects.filter(employee_touch__isnull=True, admin_approve=0, denied=0)
-            """.exclude(email=request.session.get('current_user'))"""
+            remove_emp_touch(request)
+            requests = _Request.objects.filter(employee_touch__isnull=True, admin_approve=0, denied=0).exclude(email=request.session.get('current_user'))
             return render(request, 'artTubeApp/emp_requests.html', {'reqs': requests})
     else:
         return redirect('/login?next=/employee/')
 
-#not complete
 def emp_request_view(request, id = -1):
     if request.session.get('current_user'):
         if not request.session.get('validate_requests'):
             return redirect('/validate?next=/employee/requests')
         else:
             if id < 0 or not _Request.objects.filter(id=id).exists():
-                _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(request.session.get('current_user')).id, f"request #{id} view"])
+                _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, f"request #{id} view"])
                 return redirect('/employee/requests')
-            elif _Request.objects.filter(id=id, email=request.session.get('current_user')):
-                if request.method == 'GET':
-                    _slog(LogType.USER_ACCESS_VIEW, extra_info=[request, get_user(request.session.get('current_user')), id])
-                    form1 = request_decision()
-                    form2 = account_validate()
-                elif request.method == "POST":
-                    form1 = request_decision(request.POST)
-                    form2 = account_validate(request.POST)
-                return render(request, 'artTubeApp/emp_view.html', {'item': _Request.objects.get(id=id), 'category': _Request.objects.get(id=id).img_category.name, 'd_form': form1, 'v_form': form2})
+            elif _Request.objects.filter(id=id).exists():
+                if (_Request.objects.get(id=id).employee_touch == None or _Request.objects.get(id=id).employee_touch == _Employee.objects.get(email=request.session.get('current_user')).employee_id) and _Request.objects.get(id=id).email.email != request.session.get('current_user'):
+                    if request.method == 'GET':
+                        _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, f"request #{id} view"])
+                        req = _Request.objects.get(id=id)
+                        req.employee_touch = _Employee.objects.get(email=request.session.get('current_user')).employee_id
+                        req.save(update_fields=['employee_touch'])
+                        form1 = request_decision()
+                        form2 = account_validate()
+                    elif request.method == "POST":
+                        form1 = request_decision(request.POST)
+                        form2 = account_validate(request.POST)
+                        
+                        if form2.is_valid():
+                            _email = form2.cleaned_data.get("email")
+                            _pwd = form2.cleaned_data.get("pwd")
+
+                            employee = _Employee.objects.get(email=_email)
+                            if not employee:
+                                _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                form2.add_error('email', 'Employee account not found. Try again.')
+                            else:
+                                if employee.email.email != request.session.get('current_user'):
+                                    _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                    form2.add_error('email', 'Email doesn\'t match current login. You must verify with your account details only.')
+                                elif not check_password(_pwd, get_user(_email).password):
+                                    _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                    form2.add_error('email', 'Incorrect email/password combination. Try again.')
+                                else:
+                                    if form1.is_valid():
+                                        _decision = form1.cleaned_data.get('decision')
+                                        _category = form1.cleaned_data.get('category')
+                                        _d_reason = form1.cleaned_data.get('denial_reason')
+                                        r = _Request.objects.get(id=id)
+                                        if _decision == "approve":
+                                            if _category is None:
+                                                _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                                form1.add_error('category', 'To approve a request, you must select an existing category.')
+                                            else:
+                                                item = _Request.objects.get(id=id)
+                                                _Submissions.objects.create(
+                                                    email=get_user(item.email.email),
+                                                    approval_emp=_Employee.objects.get(email=request.session.get('current_user')),
+                                                    img=r.img,
+                                                    img_type=r.img_type,
+                                                    img_title=r.img_title,
+                                                    img_desc=r.img_desc,
+                                                    approved_category=_category
+                                                )
+                                                item.delete()
+                                                _slog(LogType.EMPLOYEE_REQUEST_APPROVE, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                                return redirect('/employee/requests')
+                                        elif _decision == "deny":
+                                            if _d_reason != "":
+                                                r.update(denied=1, denial_reason=_d_reason)
+                                            else:
+                                                r.update(denied=1)
+                                            r.save()
+                                            return redirect('/employee/requests')
+                    return render(request, 'artTubeApp/emp_view.html', {'item': _Request.objects.get(id=id), 'category': _Request.objects.get(id=id).img_category.name, 'd_form': form1, 'v_form': form2})
+                else:
+                    if request.method == 'GET':
+                        _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, f"request #{id} view"])
+                    elif request.method == "POST":
+                        _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                    return redirect('/employee/requests')
             else:
                 _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(request.session.get('current_user')).id, f"request #{id} view"])
                 return redirect('/employee/requests')
@@ -357,7 +429,8 @@ def submit_request_page(request):
                                     img_category=_category,
                                     admin_approve=user.admin_approve,
                                     denied=0,
-                                    denial_reason=""
+                                    denial_reason=None,
+                                    time=datetime.now(UTC)
                                 )
                                 request.session['request_success'] = True
                                 _slog(LogType.USER_SUBMIT_REQUEST, extra_info=[request, user])
@@ -412,6 +485,7 @@ def studio_page(request):
             img_categories = [_Category.objects.get(id=i.img_category.id).name for i in imgs]
         else:
             imgs = []
+            img_categories = []
 
         if _Submissions.objects.filter(email=_email).exists():
             sub_imgs = _Submissions.objects.filter(email=_email)
@@ -419,7 +493,6 @@ def studio_page(request):
         else:
             sub_imgs = []
             sub_img_categories = []
-
         return render(request, 'artTubeApp/studio.html', {'requests': imgs, 'request_len': len(imgs), 'request_cat': img_categories, 
                                                           'pub_pieces': sub_imgs, 'pub_len': len(sub_imgs), 'pub_cat': sub_img_categories})
     else:
@@ -436,14 +509,13 @@ def request_view(request, id = -1):
         _slog(LogType.USER_FAILED_ACCESS_VIEW, extra_info=[request, get_user(request.session.get('current_user')), id])
         return redirect('studio')
 
-#REQUIRES LOGGING BASED ON TRYING TO ACCESS NON-OWNED PRIVATE SUB
 def sub_view(request, id = -1):
     if id < 0 or not _Submissions.objects.filter(id=id).exists():
         _slog(LogType.USER_FAILED_ACCESS_VIEW, extra_info=[request, get_user(request.session.get('current_user')), id])
         return redirect('studio')
     else:
         _slog(LogType.USER_ACCESS_VIEW, extra_info=[request, get_user(request.session.get('current_user')), id])
-        return render(request, 'artTubeApp/studio_view.html', {'is_sub': True, 'item': _Submissions.objects.get(id=id)})
+        return render(request, 'artTubeApp/studio_view.html', {'is_sub': True, 'item': _Submissions.objects.get(id=id), 'category': _Submissions.objects.get(id=id).approved_category.name})
 
 def denied_reqs(request):
     if request.session.get('current_user'):
@@ -457,9 +529,10 @@ def denied_reqs(request):
     else:
         return redirect('/login?next=/canvas/denied_requests')
 
-#NEEDS LOGGING
+#NEEDS LOGGING, POTENTIALLY ADDITIONAL LOGIC TOO TO INCLUDE ROOMS
 def gallery(request):
     if request.method == 'GET':
+        request.session['in_gallery'] = True
         submissions = list(_Submissions.objects.values(
             "img",
             "img_type",

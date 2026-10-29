@@ -39,11 +39,11 @@
         <b>Approved Pieces:</b>
         <br /><br />
         {% if pub_len > 0 %}
-            {% for p in pub_imgs %}
+            {% for p in pub_pieces %}
                 <div class="piece">
                     <a href="{% url 'studio_sub_view' p.id %}"><img src="data:image/*; base64,{{ p.img_b64 }}" alt="{{ p.img_title }}" style="max-width: 200px;"></a>
                     <p class="studio_item_title">Title: {{ p.img_title }}</p>
-                    <p class="studio_item_title">Category: {{ p.img_category.name }}</p>
+                    <p class="studio_item_title">Category: {{ p.approved_category.name }}</p>
                 </div>
             {% endfor %}
         {% else %}

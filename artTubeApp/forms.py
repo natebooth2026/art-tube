@@ -41,7 +41,7 @@ class CategoryChoiceField(forms.ModelChoiceField):
         return obj.name
 
 class sub_request_form(forms.Form):
-    img = forms.ImageField()
+    img = forms.ImageField(label="Artwork")
     title = forms.CharField(max_length=100)
     desc = forms.CharField(max_length=1000, required=False)
     category = CategoryChoiceField(
@@ -74,13 +74,13 @@ class add_event(forms.Form):
 class request_decision(forms.Form):
     decision = forms.ChoiceField(choices=[
         ("", "Decision..."),
-        ("1", "Approve"),
-        ("2", "Deny")
+        ("approve", "Approve"),
+        ("deny", "Deny")
     ], required=True)
     category = CategoryChoiceField(
         queryset=Category.objects.all(),
         empty_label="Official Category...",
-        label = "Category (if approved)"
-    , required=False)
+        label = "Category (if approved):",
+        required=False)
     denial_reason = forms.CharField(max_length=255, required=False, label="If denied, explain:")
 

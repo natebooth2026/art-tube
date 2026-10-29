@@ -99,7 +99,7 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), _givenTime = False
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action=f"Attempted to login to non-existant account ({extra_info[1]})"
+            action=f"Attempted action to non-existant account ({extra_info[1]})"
         )
     elif _event is LogType.ACCOUNT_LOGOUT:
         _Log.objects.create(

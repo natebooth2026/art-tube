@@ -17,7 +17,7 @@
         <br /><br />
         <h3>Request View</h3>
         <br />
-        <div class="view_item" style="display:inline-block; border:2px; border-style: dashed; padding: 10px;">
+        <div class="view_item" style="display:inline-block; border:2px; border-style: dashed; padding: 10px; max-width:300px;">
             <img src="data:image/*; base64,{{ item.img_b64 }}" alt="{{ view_item.img_title }}" style="max-width: 200px;">
             <p>Title: {{ item.img_title }}</p>
             {% if item.img_desc != "" %}
