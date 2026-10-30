@@ -2,8 +2,9 @@ from base64 import b64encode #for image decoding
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import make_password, check_password
-from datetime import timedelta, datetime, UTC
 from django.conf import settings
+from datetime import timedelta, datetime, UTC
+from django.http import Http404
 
 from .forms import account_creation, account_validate, sub_request_form, add_event, account_validate_emailMFA, request_decision, account_validate_questionsSetup, account_validate_changePWD, report_decision, switch_role
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
@@ -67,7 +68,7 @@ def login(request):
                 _slog(LogType.ACCOUNT_LOGIN, extra_info=[request, users])
                 return redirect(next_page)
             else:
-                form.add_error('email', 'Email/password not found. Try again.')
+                form.add_error('email', 'Bad login. Try again.')
                 _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, users])
 
         return render(request, 'artTubeApp/login.html', {'form': form})
@@ -96,24 +97,25 @@ def signup(request):
                 email = form.cleaned_data.get('email')
                 username = form.cleaned_data.get('username')
                 pwd = make_password(form.cleaned_data.get('pwd'))
-            if _User.objects.filter(username=username).exists() and _User.objects.filter(email=email).exists():
-                form.add_error('username', 'Username has been taken.')
-                form.add_error('email', 'Email already registered.')
-            elif _User.objects.filter(username=username).exists():
+
+                if _User.objects.filter(username=username).exists() and _User.objects.filter(email=email).exists():
+                    form.add_error('username', 'Username has been taken.')
                     form.add_error('email', 'Email already registered.')
-            elif _User.objects.filter(email=email).exists():
-                form.add_error('email', 'Email already registered.')
-            else:
-                _User.objects.create(
-                    username=username,
-                    email=email,
-                    password=pwd,
-                    admin_approve=0,
-                    locked=0,
-                    number_2fa=0
-                )
-                _slog(LogType.ACCOUNT_CREATE, extra_info=[request, get_user(email)])
-                return redirect('login')
+                elif _User.objects.filter(username=username).exists():
+                    form.add_error('username', 'username already registered.')
+                elif _User.objects.filter(email=email).exists():
+                    form.add_error('email', 'Email already registered.')
+                else:
+                    _User.objects.create(
+                        username=username,
+                        email=email,
+                        password=pwd,
+                        admin_approve=0,
+                        locked=0,
+                        number_2fa=0
+                    )
+                    _slog(LogType.ACCOUNT_CREATE, extra_info=[request, get_user(email)])
+                    return redirect('login')
         else:
             form = account_creation()
         return render(request, 'artTubeApp/signup.html', {'form': form})

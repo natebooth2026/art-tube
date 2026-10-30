@@ -145,7 +145,7 @@ class Employee(models.Model):
     email = models.OneToOneField('User', models.DO_NOTHING, db_column='email')
     employee_id = models.AutoField(primary_key=True)
     can_approve_req = models.IntegerField()
-    deactivated = models.IntegerField()
+    deactivated = models.IntegerField(default=0)
 
     class Meta:
         managed = True
@@ -158,7 +158,7 @@ class Events(models.Model):
     event_end = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'events'
 
 
@@ -193,7 +193,7 @@ class Request(models.Model):
     admin_approve = models.IntegerField()
     denied = models.IntegerField()
     denial_reason = models.CharField(max_length=255, blank=True, null=True)
-    time = models.DateTimeField()
+    time = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = True
