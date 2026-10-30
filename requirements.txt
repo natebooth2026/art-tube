@@ -1,0 +1,8 @@
+django
+base64
+datetime
+cryptography
+ipware
+enum
+magic
+pillow
