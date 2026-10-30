@@ -15,7 +15,7 @@ class Admin(models.Model):
     employee = models.ForeignKey('Employee', models.DO_NOTHING)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'admin'
 
 
@@ -92,7 +92,7 @@ class Category(models.Model):
     name = models.CharField(max_length=30)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'category'
 
 
@@ -145,10 +145,10 @@ class Employee(models.Model):
     email = models.OneToOneField('User', models.DO_NOTHING, db_column='email')
     employee_id = models.AutoField(primary_key=True)
     can_approve_req = models.IntegerField()
-    deactivated = models.IntegerField()
+    deactivated = models.IntegerField(default=0)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'employee'
 
 
@@ -158,7 +158,7 @@ class Events(models.Model):
     event_end = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'events'
 
 
@@ -169,7 +169,7 @@ class Log(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'log'
 
 
@@ -193,10 +193,10 @@ class Request(models.Model):
     admin_approve = models.IntegerField()
     denied = models.IntegerField()
     denial_reason = models.CharField(max_length=255, blank=True, null=True)
-    time = models.DateTimeField()
+    time = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'request'
 
     def img_b64(self):
@@ -217,7 +217,7 @@ class Submissions(models.Model):
     admin_review = models.ForeignKey(Admin, models.DO_NOTHING, db_column='admin_review', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'submissions'
 
     def img_b64(self):
@@ -239,5 +239,5 @@ class User(models.Model):
     secure_a2 = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'user'
