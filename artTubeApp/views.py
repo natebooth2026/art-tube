@@ -1,11 +1,8 @@
 from base64 import b64encode #for image decoding
-
 from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import make_password, check_password
 from django.conf import settings
 from datetime import timedelta, datetime, UTC
-from django.http import Http404
-
 from .forms import account_creation, account_validate, sub_request_form, add_event, account_validate_emailMFA, request_decision, account_validate_questionsSetup, account_validate_changePWD, report_decision, switch_role
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
 from .sanitize import sanitize_img
