@@ -5,7 +5,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from datetime import timedelta, datetime, UTC
 
 from .forms import account_creation, account_validate, sub_request_form, add_event, request_decision, report_decision, switch_role
-from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
+from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events, Occupancy as _Occupancy
 from .sanitize import sanitize_img
 from .log import add_log as _slog, LogType
 
@@ -808,26 +808,61 @@ def denied_reqs(request):
     else:
         return redirect('/login?next=/canvas/denied_requests')
 
-#NEEDS LOGGING, POTENTIALLY ADDITIONAL LOGIC TOO TO INCLUDE ROOMS
 def gallery(request):
-    revoke_validations(request)
     if request.method == 'GET':
-        request.session['in_gallery'] = True
-        submissions = list(_Submissions.objects.values(
-            "img",
-            "img_type",
-            "img_title",
-            "img_desc",
-        ))
+        revoke_validations(request)
+        if not request.session['in_gallery']:
+            request.session['in_gallery'] = True
+            if not request.session.get('current_user'):
+                _slog(LogType.USER_ENTER_GALLERY, extra_info=[request, None])
+            else:
+                _slog(LogType.USER_ENTER_GALLERY, extra_info=[request, get_user(request.session.get('current_user'))])
 
-        #convert LONGBLOB to image
-        for submission in submissions:
-            binary_image = b64encode(submission["img"]).decode("ascii")
-            submission["img"] = (
-                f"data:{submission['img_type']};base64,{binary_image}"
-            )
-        
-        return render(request, 'artTubeApp/gallery.html', {'submissions': submissions})
+        if request.session.get('in_room'):
+            return redirect(f'/gallery/room/{request.session.get('room_id')}')
+
+        categories = _Category.objects.values_list('name', flat=True)
+
+        return render(request, 'artTubeApp/gallery.html', {'categories': categories})
+    if request.method == 'POST':
+        if not request.session.get('in_room'):
+            del request.session['in_gallery']
+            if not request.session.get('current_user'):
+                _slog(LogType.USER_LEAVE_GALLERY, extra_info=[request, None])
+            else:
+                _slog(LogType.USER_LEAVE_GALLERY, extra_info=[request, get_user(request.session.get('current_user'))])
+            return redirect('home')
+        else:
+            return redirect(f'/gallery/room/{request.session.get('room_id')}')
+
+def gallery_room(request, id = -1):
+    if id < 0 or not _Category.objects.filter(id=id).exists():
+        if request.session.get('current_user'):
+            _slog(LogType.USER_FAILED_ENTER_ROOM, extra_info=[request, get_user(request.session.get('current_user')), id])
+        else:
+            _slog(LogType.USER_FAILED_ENTER_ROOM, extra_info=[request, None, id])
+        return redirect('gallery')
+    else:
+        if request.method == 'GET':
+            if not request.session.get('in_room'):
+                revoke_validations(request)
+                request.session['in_room'] = True
+                request.session['room_id'] = id
+                if request.session.get('current_user'):
+                    _slog(LogType.USER_ENTER_ROOM, extra_info=[request, get_user(request.session.get('current_user')), id])
+                else:
+                    _slog(LogType.USER_ENTER_ROOM, extra_info=[request, None, id])
+            else:
+                return redirect(f'/gallery/room/{request.session.get('room_id')}')
+        elif request.method == 'POST':
+            del request.session['in_room']
+            del request.session['room_id']
+            if request.session.get('current_user'):
+                _slog(LogType.USER_LEAVE_ROOM, extra_info=[request, get_user(request.session.get('current_user')), id])
+            else:
+                _slog(LogType.USER_LEAVE_ROOM, extra_info=[request, None, id])
+            return redirect('gallery')
+        return render(request, 'artTubeApp/gallery_room.html', {'cat_name': True, 'items': _Submissions.objects.filter(category=id)})
 
 def events(request):
     if request.method == 'GET':
