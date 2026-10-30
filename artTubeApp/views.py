@@ -59,7 +59,7 @@ def login(request):
             users = _User.objects.filter(email=_email).first()
             if users is None:
                 form.add_error('email', 'Email is not associated with an account. Please create a new account or try another email.')
-                _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request])
+                _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request, _email])
             elif check_password(_password, users.password):
                 next_page = request.POST.get('next') or request.GET.get('next') or '/'
                 request.session.cycle_key()
@@ -132,7 +132,6 @@ def emp_dashboard(request):
             _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(email), _Employee.objects.get(email=email).employee_id, "Employee Dashboard"])
         else:
             _slog(LogType.USER_ATTEMPT_EMP_DASHBOARD, extra_info=[request, get_user(email)])
-        # return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
     else:
         return redirect('/login?next=/employee/')
     
@@ -164,6 +163,8 @@ def emp_dashboard(request):
                 else:
                     is_emp = False
                     return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
+            else: #resend button clicked
+                return redirect('employee') #redirects and resends email
         else: #resend button clicked
             return redirect('employee') #redirects and resends email
                 
@@ -420,6 +421,8 @@ def admin_dashboard(request):
                 else:
                     is_admin = False
                     return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
+            else: #user clicked resend code
+                return redirect('admin') #redirects and resends email
         else: #user clicked resend code
             return redirect('admin') #redirects and resends email
 
@@ -648,11 +651,11 @@ def validate(request):
                 _email = form.cleaned_data.get('email')
                 _password = form.cleaned_data.get('pwd')
 
-                employee = _Employee.objects.get(email=_email)
+                employee = _Employee.objects.filter(email=_email).first()
 
                 if not employee:
                     form.add_error('email', 'Email is not associated with an employee/admin account. Please contact admin/database support if this is an error.')
-                    _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request])
+                    _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request, _email])
                 else:
                     if not _Admin.objects.filter(employee=employee).exists():
                         if employee.email.email != request.session.get('current_user'):
