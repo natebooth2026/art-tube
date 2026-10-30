@@ -4,17 +4,36 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import make_password, check_password
 from datetime import timedelta, datetime, UTC
 
-from .forms import account_creation, account_validate, sub_request_form, add_event, request_decision
+from .forms import account_creation, account_validate, sub_request_form, add_event, request_decision, report_decision, switch_role
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
 from .sanitize import sanitize_img
 from .log import add_log as _slog, LogType
 
-#helper func
+#helper funcs
 def get_user(email):
     return _User.objects.get(email=email)
 
 def can_enter(request):
     return not request.session.get('in_gallery')
+
+def admin_has_req_access(id):
+    return _Request.objects.get(id=id).admin_approve == 1 
+
+def remove_emp_touch(request):
+    employee_obj = _Employee.objects.get(email=request.session.get('current_user'))
+    if employee_obj:
+        _Request.objects.filter(employee_touch=employee_obj.employee_id).update(employee_touch=None)
+
+def revoke_validations(request):
+    if _Admin.objects.filter(email=request.session.get('current_user')).exists():
+        request.session['validate_requests'] = False
+        request.session['validate_events'] = False
+        request.session['validate_reports'] = False
+        request.session['validate_roles'] = False
+    elif _Employee.objects.filter(email=request.session.get('current_user')).exists():
+        request.session['validate_requests'] = False
+        request.session['validate_events'] = False
+        remove_emp_touch(request)
     
 # Create your views here.
 
@@ -25,30 +44,32 @@ def landing(request):
     return render(request, 'artTubeApp/index.html')
 
 def login(request):
-    if request.method == 'GET':
-        form = account_validate()
-    elif request.method == 'POST':
-        form = account_validate(request.POST)
-        if form.is_valid():
-            _email = form.cleaned_data.get('email')
-            _password = form.cleaned_data.get('pwd')
+    if not request.session.get('current_user'):
+        if request.method == 'GET':
+            form = account_validate()
+        elif request.method == 'POST':
+            form = account_validate(request.POST)
+            if form.is_valid():
+                _email = form.cleaned_data.get('email')
+                _password = form.cleaned_data.get('pwd')
 
-            users = _User.objects.get(email=_email)
+                users = _User.objects.get(email=_email)
 
-            if not users:
-                form.add_error('email', 'Email is not associated with an account. Please create a new account or try another email.')
-                _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request])
-            elif check_password(_password, users.password):
-                next_page = request.POST.get('next') or request.GET.get('next') or '/'
-                request.session['current_user'] = users.email
-                _slog(LogType.ACCOUNT_LOGIN, extra_info=[request, users])
-                return redirect(next_page)
-            else:
-                form.add_error('email', 'Email/password not found. Try again.')
-                _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, users])
+                if not users:
+                    form.add_error('email', 'Email is not associated with an account. Please create a new account or try another email.')
+                    _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request])
+                elif check_password(_password, users.password):
+                    next_page = request.POST.get('next') or request.GET.get('next') or '/'
+                    request.session['current_user'] = users.email
+                    _slog(LogType.ACCOUNT_LOGIN, extra_info=[request, users])
+                    return redirect(next_page)
+                else:
+                    form.add_error('email', 'Email/password not found. Try again.')
+                    _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, users])
 
-            
-    return render(request, 'artTubeApp/login.html', {'form': form})
+        return render(request, 'artTubeApp/login.html', {'form': form})
+    else:
+        return redirect('home')
 
 def logout(request):
     if request.session.get('current_user') and _User.objects.filter(email=request.session.get('current_user')):
@@ -97,29 +118,14 @@ def signup(request):
         revoke_validations(request)
         return redirect('home')
 
-def remove_emp_touch(request):
-    employee_obj = _Employee.objects.get(email=request.session.get('current_user'))
-    if employee_obj:
-        _Request.objects.filter(employee_touch=employee_obj.employee_id).update(employee_touch=None)
-
-def revoke_validations(request):
-    if _Admin.objects.filter(email=request.session.get('current_user')).exists():
-        request.session['validate_requests'] = False
-        request.session['validate_events'] = False
-        request.session['validate_reports'] = False
-        request.session['validate_roles'] = False
-    elif _Employee.objects.filter(email=request.session.get('current_user')).exists():
-        request.session['validate_requests'] = False
-        request.session['validate_events'] = False
-        remove_emp_touch(request)
-
 def emp_dashboard(request):
     if request.session.get('current_user'):
         revoke_validations(request)
         email = request.session.get('current_user')
         is_emp = False
-        if _Employee.objects.filter(email=email):
-            is_emp = True
+        if _Employee.objects.filter(email=email).exists():
+            if _Employee.objects.get(email=email).deactivated == 0:
+                is_emp = True
             _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(email), _Employee.objects.get(email=email).employee_id, "Employee Dashboard"])
         else:
             _slog(LogType.USER_ATTEMPT_EMP_DASHBOARD, extra_info=[request, get_user(email)])
@@ -211,15 +217,15 @@ def emp_requests_landing(request):
         if not request.session.get('validate_requests'):
             return redirect('/validate?next=/employee/requests')
         else:
-            _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, "requests"])
+            if not _Admin.objects.filter(email=request.session.get('current_user')).exists():
+                _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, "requests"])
+            else:
+                _slog(LogType.ADMIN_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, "requests"])
             remove_emp_touch(request)
             requests = _Request.objects.filter(employee_touch__isnull=True, admin_approve=0, denied=0).exclude(email=request.session.get('current_user'))
             return render(request, 'artTubeApp/emp_requests.html', {'reqs': requests})
     else:
         return redirect('/login?next=/employee/')
-
-# def admin_has_req_access(id):
-#    return 
 
 def emp_request_view(request, id = -1):
     if request.session.get('current_user'):
@@ -227,12 +233,18 @@ def emp_request_view(request, id = -1):
             return redirect('/validate?next=/employee/requests')
         else:
             if id < 0 or not _Request.objects.filter(id=id).exists():
-                _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, f"request #{id} view"])
+                if not _Admin.objects.filter(email=request.session.get('current_user')).exists():
+                    _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, f"request #{id} view"])
+                else:
+                    _slog(LogType.ADMIN_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, f"request #{id} view"])
                 return redirect('/employee/requests')
             elif _Request.objects.filter(id=id).exists():
-                if (_Request.objects.get(id=id).employee_touch == None or _Request.objects.get(id=id).employee_touch == _Employee.objects.get(email=request.session.get('current_user')).employee_id) and _Request.objects.get(id=id).email.email != request.session.get('current_user'):
+                if (_Request.objects.get(id=id).employee_touch == None or _Request.objects.get(id=id).employee_touch == _Employee.objects.get(email=request.session.get('current_user')).employee_id) and _Request.objects.get(id=id).email.email != request.session.get('current_user') and not (_Admin.objects.get(email=request.session.get('current_user')) and not admin_has_req_access(id)):
                     if request.method == 'GET':
-                        _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, f"request #{id} view"])
+                        if not _Admin.objects.filter(email=request.session.get('current_user')).exists():
+                            _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, f"request #{id} view"])
+                        else:
+                            _slog(LogType.ADMIN_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, f"request #{id} view"])
                         req = _Request.objects.get(id=id)
                         req.employee_touch = _Employee.objects.get(email=request.session.get('current_user')).employee_id
                         req.save(update_fields=['employee_touch'])
@@ -247,25 +259,38 @@ def emp_request_view(request, id = -1):
                             _pwd = form2.cleaned_data.get("pwd")
 
                             employee = _Employee.objects.get(email=_email)
+                            is_admin = _Admin.objects.filter(email=request.session.get('current_user'))
                             if not employee:
-                                _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                if not is_admin:
+                                    _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                else:
+                                    _slog(LogType.ADMIN_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
                                 form2.add_error('email', 'Employee account not found. Try again.')
                             else:
                                 if employee.email.email != request.session.get('current_user'):
-                                    _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                    if not is_admin:
+                                        _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                    else:
+                                        _slog(LogType.ADMIN_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
                                     form2.add_error('email', 'Email doesn\'t match current login. You must verify with your account details only.')
                                 elif not check_password(_pwd, get_user(_email).password):
-                                    _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                    if not is_admin:
+                                        _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                    else:
+                                        _slog(LogType.ADMIN_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
                                     form2.add_error('email', 'Incorrect email/password combination. Try again.')
                                 else:
                                     if form1.is_valid():
                                         _decision = form1.cleaned_data.get('decision')
                                         _category = form1.cleaned_data.get('category')
                                         _d_reason = form1.cleaned_data.get('denial_reason')
-                                        r = _Request.objects.get(id=id)
+                                        r = _Request.objects.filter(id=id)
                                         if _decision == "approve":
                                             if _category is None:
-                                                _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                                if not is_admin:
+                                                    _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                                else:
+                                                    _slog(LogType.ADMIN_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
                                                 form1.add_error('category', 'To approve a request, you must select an existing category.')
                                             else:
                                                 item = _Request.objects.get(id=id)
@@ -279,30 +304,46 @@ def emp_request_view(request, id = -1):
                                                     approved_category=_category
                                                 )
                                                 item.delete()
-                                                _slog(LogType.EMPLOYEE_REQUEST_APPROVE, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                                if not is_admin:
+                                                    _slog(LogType.EMPLOYEE_REQUEST_APPROVE, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                                else:
+                                                    _slog(LogType.ADMIN_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
                                                 return redirect('/employee/requests')
                                         elif _decision == "deny":
                                             if _d_reason != "":
                                                 r.update(denied=1, denial_reason=_d_reason)
                                             else:
                                                 r.update(denied=1)
-                                            r.save()
+                                            if not is_admin:
+                                                _slog(LogType.EMPLOYEE_REQUEST_DENY, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                                            else:
+                                                _slog(LogType.ADMIN_REQUEST_DENY, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
                                             return redirect('/employee/requests')
                     return render(request, 'artTubeApp/emp_view.html', {'item': _Request.objects.get(id=id), 'category': _Request.objects.get(id=id).img_category.name, 'd_form': form1, 'v_form': form2})
                 else:
                     if request.method == 'GET':
-                        _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, f"request #{id} view"])
+                        if not _Admin.objects.filter(email=request.session.get('current_user')).exists():
+                            _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, f"request #{id} view"])
+                        else:
+                            _slog(LogType.ADMIN_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, f"request #{id} view"])
                     elif request.method == "POST":
-                        _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                        if not _Admin.objects.filter(email=request.session.get('current_user')).exists():
+                            _slog(LogType.EMPLOYEE_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, id])
+                        else:
+                            _slog(LogType.ADMIN_FAILED_REQUEST_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
                     return redirect('/employee/requests')
             else:
-                _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(request.session.get('current_user')).id, f"request #{id} view"])
+                if not _Admin.objects.filter(email=request.session.get('current_user')).exists():
+                    _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(request.session.get('current_user')).employee_id, f"request #{id} view"])
+                else:
+                    _slog(LogType.ADMIN_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(request.session.get('current_user')).admin_id, f"request #{id} view"])
                 return redirect('/employee/requests')
     else:
         return redirect('/login?next=/employee/')
 
 def admin_dashboard(request):
     if request.session.get('current_user'):
+        revoke_validations(request)
         email = request.session.get('current_user')
         is_admin = False
         if _Admin.objects.filter(email=email):
@@ -316,11 +357,224 @@ def admin_dashboard(request):
     else:
         return redirect('/login?next=/admin/')
 
+def admin_submissions_landing(request):
+    if request.session.get('current_user'):
+        if not request.session.get('validate_reports'):
+            return redirect('/validate?next=/admin/submissions')
+        else:
+            _slog(LogType.ADMIN_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, "submissions"])
+            remove_emp_touch(request)
+            submissions = _Submissions.objects.all().exclude(email=request.session.get('current_user'), approval_emp_id=_Employee.objects.get(email=request.session.get('current_user')).employee_id).order_by('admin_review')
+            return render(request, 'artTubeApp/admin_submissions.html', {'subs': submissions})
+    else:
+        return redirect('/login?next=/admin/')
+
+def admin_submission_view(request, id = -1):
+    if request.session.get('current_user'):
+        if not request.session.get('validate_reports'):
+            return redirect('/validate?next=/admin/submissions')
+        else:
+            if id < 0 or not _Submissions.objects.filter(id=id).exists():
+                _slog(LogType.ADMIN_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, f"submission #{id} view"])
+                return redirect('/admin/submissions')
+            elif _Submissions.objects.filter(id=id).exists():
+                if (_Submissions.objects.get(id=id).admin_touch == None or _Submissions.objects.get(id=id).admin_touch == _Employee.objects.get(email=request.session.get('current_user')).employee_id) and _Submissions.objects.get(id=id).email.email != request.session.get('current_user'):
+                    if request.method == 'GET':
+                        _slog(LogType.ADMIN_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, f"submission #{id} view"])
+                        sub = _Submissions.objects.get(id=id)
+                        sub.admin_touch = _Employee.objects.get(email=request.session.get('current_user')).employee_id
+                        sub.save(update_fields=['admin_touch'])
+                        form1 = report_decision()
+                        form2 = account_validate()
+                    elif request.method == "POST":
+                        form1 = report_decision(request.POST)
+                        form2 = account_validate(request.POST)
+                        
+                        if form2.is_valid():
+                            _email = form2.cleaned_data.get("email")
+                            _pwd = form2.cleaned_data.get("pwd")
+
+                            admin = _Admin.objects.get(email=_email)
+                            if not admin:
+                                _slog(LogType.ADMIN_FAILED_REPORT_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
+                                form2.add_error('email', 'Admin account not found. Try again.')
+                            else:
+                                if admin.email.email != request.session.get('current_user'):
+                                    _slog(LogType.ADMIN_FAILED_REPORT_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
+                                    form2.add_error('email', 'Email doesn\'t match current login. You must verify with your account details only.')
+                                elif not check_password(_pwd, get_user(_email).password):
+                                    _slog(LogType.ADMIN_FAILED_REPORT_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
+                                    form2.add_error('email', 'Incorrect email/password combination. Try again.')
+                                else:
+                                    if form1.is_valid():
+                                        _decision = form1.cleaned_data.get('decision')
+                                        _d_reason = form1.cleaned_data.get('denial_reason')
+                                        s = _Submissions.objects.filter(id=id)
+                                        s_obj = _Submissions.objects.get(id=id)
+                                        if _decision == "verify":
+                                            s.update(admin_review=admin)
+                                            _slog(LogType.ADMIN_REPORT_DENIED, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
+                                            return redirect('/admin/submissions')
+                                        elif _decision == "remove":
+                                            reported_user = _User.objects.filter(email=s_obj.email.email)
+                                            reported_user.update(admin_approve=1)
+                                            if _d_reason != "":
+                                                new_r = _Request.objects.create(
+                                                        email=s_obj.email,
+                                                        img=s_obj.img,
+                                                        img_type=s_obj.img_type,
+                                                        img_title=s_obj.img_title,
+                                                        img_desc=s_obj.img_desc,
+                                                        img_category=s_obj.approved_category,
+                                                        admin_approve=1,
+                                                        denied=1,
+                                                        denial_reason=_d_reason,
+                                                        time=datetime.now(UTC)
+                                                    )
+                                            else:
+                                                new_r = _Request.objects.create(
+                                                        email=s_obj.email,
+                                                        img=s_obj.img,
+                                                        img_type=s_obj.img_type,
+                                                        img_title=s_obj.img_title,
+                                                        img_desc=s_obj.img_desc,
+                                                        img_category=s_obj.approved_category,
+                                                        admin_approve=1,
+                                                        denied=1,
+                                                        denied_reason=None,
+                                                        time=datetime.now(UTC)
+                                                    )
+                                            s.delete()
+                                            _slog(LogType.ADMIN_REPORT_APPROVED, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
+                                            return redirect('/admin/submissions')
+                    return render(request, 'artTubeApp/admin_sub_view.html', {'item': _Submissions.objects.get(id=id), 'category': _Submissions.objects.get(id=id).approved_category.name, 'admin_app': _Submissions.objects.get(id=id).admin_review, 'd_form': form1, 'v_form': form2})
+                else:
+                    if request.method == 'GET':
+                        _slog(LogType.ADMIN_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, f"submission #{id} view"])
+                    elif request.method == "POST":
+                        _slog(LogType.ADMIN_FAILED_REPORT_DECISION, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, id])
+                    return redirect('/admin/submissions')
+            else:
+                _slog(LogType.ADMIN_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(request.session.get('current_user')).admin_id, f"submission #{id} view"])
+                return redirect('/admin/submissions')
+    else:
+        return redirect('/login?next=/admin/')
+
+def admin_switch_roles(request):
+    if request.session.get('current_user'):
+        if not request.session.get('validate_roles'):
+            return redirect('/validate?next=/admin/switch_role')
+        else:
+            if request.method == 'GET':
+                _slog(LogType.ADMIN_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, "roles"])
+                form1 = switch_role()
+                form2 = account_validate()
+            elif request.method == 'POST':
+                form1 = switch_role(request.POST)
+                form2 = account_validate(request.POST)
+
+                if form1.is_valid():
+                    _m_email = form1.cleaned_data.get("candidate_email")
+                    _role = form1.cleaned_data.get("role")
+
+                    print(_m_email)
+
+                    _m_user = _User.objects.get(email=_m_email)
+                    if _Employee.objects.filter(email=_m_email).exists():
+                        _m_is_emp = _Employee.objects.get(email=_m_email)
+                    else:
+                        _m_is_emp = None
+
+                    if form2.is_valid():
+                        _email = form2.cleaned_data.get("email")
+                        _pwd = form2.cleaned_data.get("pwd")
+
+                        admin = _Admin.objects.get(email=_email)
+                        if not admin:
+                            if _m_user and (_m_is_emp and _m_is_emp.deactivated == 0) and _role == "fire":
+                                _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "Employee", "User"])
+                            elif _m_user and (_m_is_emp and _m_is_emp.deactivated == 0) and _role == "hire":
+                                _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "Employee", "Employee"])
+                            elif _m_user and _role == "hire":
+                                _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "User", "Employee"])
+                            elif _m_user and _role == "fire":
+                                _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "User", "User"])
+                            form2.add_error('email', 'Admin account not found. Try again.')
+                        else:
+                            if admin.email.email != request.session.get('current_user'):
+                                if _m_user and (_m_is_emp and _m_is_emp.deactivated == 0) and _role == "fire":
+                                    _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "Employee", "User"])
+                                elif _m_user and (_m_is_emp and _m_is_emp.deactivated == 0) and _role == "hire":
+                                    _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "Employee", "Employee"])
+                                elif _m_user and _role == "hire":
+                                    _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "User", "Employee"])
+                                elif _m_user and _role == "fire":
+                                    _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "User", "User"])
+                                form2.add_error('email', 'Email doesn\'t match current login. You must verify with your account details only.')
+                            elif not check_password(_pwd, get_user(_email).password):
+                                if _m_user and (_m_is_emp and _m_is_emp.deactivated == 0) and _role == "fire":
+                                    _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "Employee", "User"])
+                                elif _m_user and (_m_is_emp and _m_is_emp.deactivated == 0) and _role == "hire":
+                                    _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "Employee", "Employee"])
+                                elif _m_user and _role == "hire":
+                                    _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "User", "Employee"])
+                                elif _m_user and _role == "fire":
+                                    _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "User", "User"])
+                                form2.add_error('email', 'Incorrect email/password combination. Try again.')
+                            else:
+                                if not _m_user:
+                                    _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "Unknown", "Unknown"])
+                                    form1.add_error('email', 'Not valid account. Try again. DON\'T FALL FOR A SCAM!')
+                                elif _m_is_emp:
+                                    if _m_is_emp.deactivated == 0 and _role == "fire": #valid
+                                        _m_is_emp.deactivated = 1
+                                        _m_is_emp.save()
+                                        _slog(LogType.ADMIN_SWITCH_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "Employee", "User"])
+                                        form1 = switch_role()
+                                        form2 = account_validate()
+                                    elif _m_is_emp.deactivated == 1 and _role == "hire": #valid
+                                        _m_is_emp.deactivated = 0
+                                        _m_is_emp.save()
+                                        _slog(LogType.ADMIN_SWITCH_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "User", "Employee"])
+                                        form1 = switch_role()
+                                        form2 = account_validate()
+                                    elif _m_is_emp.deactivated == 0 and _role == "hire": #invalid
+                                        form1.add_error('role', 'Invalid role switch. Can\'t hire active employee')
+                                        _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "Employee", "Employee"])
+                                    elif _m_is_emp.deactivated == 1 and _role == "fire": #invalid
+                                        form1.add_error('role', 'Invalid role switch. Can\'t demote user/inactive employee')
+                                        _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "User", "User"])
+                                elif not _m_is_emp and _role == "hire": #valid
+                                    _Employee.objects.create(
+                                        email=_m_user,
+                                        can_approve_req = 1,
+                                        deactivated = 0
+                                    )
+                                    _slog(LogType.ADMIN_SWITCH_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "Employee", "User"])
+                                    form1 = switch_role()
+                                    form2 = account_validate()
+                                elif (not _m_is_emp or _m_is_emp.deactivated == 1) and _role == "fire": #invalid
+                                    form1.add_error('role', 'Invalid role switch. Can\'t demote user/inactive employee')
+                                    _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "User", "User"])
+        return render(request, 'artTubeApp/admin_role_switch.html', {'r_form': form1, 'v_form': form2})        
+    else:       
+        return redirect('/login?next/admin/')
+
 def validate(request):
     if request.session.get('current_user'):
         if request.method == 'GET' and _Employee.objects.filter(email=request.session.get('current_user')).exists():
-            form = account_validate()
-            _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, "validation"])
+            next_page = request.POST.get('next') or request.GET.get('next') or '/'
+            if _Employee.objects.get(email=request.session.get('current_user')).deactivated == 0:
+                form = account_validate()
+                if not _Admin.objects.filter(email=request.session.get('current_user')):
+                    _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, "validation"])
+                else:
+                    _slog(LogType.ADMIN_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, "validation"])
+            else:
+                if next_page[0:7] == "/admin/":
+                    return redirect('admin')
+                else:
+                    return redirect('employee')
         if request.method == 'POST' and _Employee.objects.filter(email=request.session.get('current_user')).exists():
             next_page = request.POST.get('next') or request.GET.get('next') or '/'
             form = account_validate(request.POST)
@@ -331,28 +585,46 @@ def validate(request):
                 employee = _Employee.objects.get(email=_email)
 
                 if not employee:
-                    form.add_error('email', 'Email is not associated with an employee account. Please contact admin if this is an error.')
+                    form.add_error('email', 'Email is not associated with an employee/admin account. Please contact admin/database support if this is an error.')
                     _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request])
                 else:
-                    if employee.email.email != request.session.get('current_user'):
-                        _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, next_page])
-                        form.add_error('email', 'Email doesn\'t match current login. You must verify with your account details only.')
-                    elif not check_password(_password, employee.email.password):
-                        _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, next_page])
-                        form.add_error('email', 'Incorrect email/password combination. Try again.')
+                    if not _Admin.objects.filter(employee=employee).exists():
+                        if employee.email.email != request.session.get('current_user'):
+                            _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, next_page])
+                            form.add_error('email', 'Email doesn\'t match current login. You must verify with your account details only.')
+                        elif not check_password(_password, employee.email.password):
+                            _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, next_page])
+                            form.add_error('email', 'Incorrect email/password combination. Try again.')
+                        else:
+                            revoke_validations(request)
+                            if next_page == "/employee/events":
+                                request.session['validate_events'] = True
+                            elif next_page == "/employee/requests":
+                                request.session['validate_requests'] = True
+                            return redirect(next_page)
                     else:
-                        revoke_validations(request)
-                        if next_page == "/employee/events" or next_page == "/admin/events":
-                            request.session['validate_events'] = True
-                        elif next_page == "/employee/requests" or next_page == "/admin/requests":
-                            request.session['validate_requests'] = True
-                        elif next_page == "/admin/reports":
-                            request.session['validate_reports'] = True
-                        elif next_page == "/admin/roles":
-                            request.session['validate_roles'] = True
-                        return redirect(next_page)
+                        if employee.email.email != request.session.get('current_user'):
+                            _slog(LogType.ADMIN_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, next_page])
+                            form.add_error('email', 'Email doesn\'t match current login. You must verify with your account details only.')
+                        elif not check_password(_password, employee.email.password):
+                            _slog(LogType.ADMIN_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, next_page])
+                            form.add_error('email', 'Incorrect email/password combination. Try again.')
+                        else:
+                            revoke_validations(request)
+                            if next_page == "/employee/events":
+                                request.session['validate_events'] = True
+                            elif next_page == "/employee/requests":
+                                request.session['validate_requests'] = True
+                            elif next_page == "/admin/submissions":
+                                request.session['validate_reports'] = True
+                            elif next_page == "/admin/switch_role":
+                                request.session['validate_roles'] = True
+                            return redirect(next_page)
         if not _Employee.objects.filter(email=request.session.get('current_user')).exists():
-            return redirect('employee')
+            if next_page[0:7] == "/admin/":
+                return redirect('admin')
+            else:
+                return redirect('employee')
     else:
         return redirect('/login?next=/employee/')
             
@@ -481,6 +753,7 @@ def request_wait(request):
 
 def studio_page(request):
     if request.session.get('current_user'):
+        revoke_validations(request)
         _email = request.session.get('current_user')
         _slog(LogType.USER_ACCESS_STUDIO, extra_info=[request, get_user(_email)])
         if _Request.objects.filter(email=_email).exists():
@@ -506,6 +779,7 @@ def request_view(request, id = -1):
         _slog(LogType.USER_FAILED_ACCESS_VIEW, extra_info=[request, get_user(request.session.get('current_user')), id])
         return redirect('studio')
     elif _Request.objects.filter(id=id, email=request.session.get('current_user')):
+        revoke_validations(request)
         _slog(LogType.USER_ACCESS_VIEW, extra_info=[request, get_user(request.session.get('current_user')), id])
         return render(request, 'artTubeApp/studio_view.html', {'is_sub': False, 'item': _Request.objects.get(id=id), 'category': _Request.objects.get(id=id).img_category.name})
     else:
@@ -517,11 +791,13 @@ def sub_view(request, id = -1):
         _slog(LogType.USER_FAILED_ACCESS_VIEW, extra_info=[request, get_user(request.session.get('current_user')), id])
         return redirect('studio')
     else:
+        revoke_validations(request)
         _slog(LogType.USER_ACCESS_VIEW, extra_info=[request, get_user(request.session.get('current_user')), id])
         return render(request, 'artTubeApp/studio_view.html', {'is_sub': True, 'item': _Submissions.objects.get(id=id), 'category': _Submissions.objects.get(id=id).approved_category.name})
 
 def denied_reqs(request):
     if request.session.get('current_user'):
+        revoke_validations(request)
         _email = request.session.get('current_user')
         if _Request.objects.filter(email=_email).exists():
             imgs = _Request.objects.filter(email=_email)
@@ -534,6 +810,7 @@ def denied_reqs(request):
 
 #NEEDS LOGGING, POTENTIALLY ADDITIONAL LOGIC TOO TO INCLUDE ROOMS
 def gallery(request):
+    revoke_validations(request)
     if request.method == 'GET':
         request.session['in_gallery'] = True
         submissions = list(_Submissions.objects.values(
@@ -554,6 +831,7 @@ def gallery(request):
 
 def events(request):
     if request.method == 'GET':
+        revoke_validations(request)
         events = list(_Events.objects.values(
                                 "event_title",
                                 "event_start",

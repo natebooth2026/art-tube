@@ -307,14 +307,14 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), _givenTime = False
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action=f"Admin #{extra_info[2]} switched role of user #{extra_info[3]} from {extra_info[4]} to {extra_info[5]}",
+            action=f"Admin #{extra_info[2]} switched role of user \"{extra_info[3]}\" from {extra_info[4]} to {extra_info[5]}",
             email=extra_info[1]
         )
     elif _event is LogType.ADMIN_FAILED_SWITCHING_ROLE:
         _Log.objects.create(
             time=_time,
             ip=get_client_ip(extra_info[0]),
-            action=f"Admin #{extra_info[2]} failed to switch role of user #{extra_info[3]} from {extra_info[4]} to {extra_info[5]}",
+            action=f"Admin #{extra_info[2]} failed to switch role of user \"{extra_info[3]}\" from {extra_info[4]} to {extra_info[5]}",
             email=extra_info[1]
         )
     elif _event is LogType.ADMIN_CHANGE_PASSWORD:

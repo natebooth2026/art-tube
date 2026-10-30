@@ -1,0 +1,33 @@
+<html>
+    <head>
+        <title>ArtTube - Admin</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Workbench&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <div class="mx-auto p-2" style="width: 200px; font-family: Workbench, sans-serif;">
+            <h1 style="font-size: 3rem;">ArtTube</h1>
+        </div>
+        {% include 'artTubeApp/navbar.html' %}
+        <hr>
+        <h1>Admin Portal</h1>
+        <a href="{% url 'admin' %}"><button>Go Back</button></a>
+        <br />
+        <div class="forms" style="display:inline-block; margin-left: 40px;">
+            <form method="post">
+                <div id="role_form" style="display: inline-block">
+                    {% csrf_token %}
+                    {{ r_form.as_p }}
+                </div>
+                <div id="verify_form" style="display: inline-block; margin-left:10px">
+                    <h4>To submit role change, validate</h4>
+                    {{ v_form.as_p }}
+                </div>
+                <br />
+                <button type="submit">Submit Request</button>
+            </form>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,43 @@
+<html>
+    <head>
+        <title>ArtTube - Admin</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Workbench&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <div class="mx-auto p-2" style="width: 200px; font-family: Workbench, sans-serif;">
+            <h1 style="font-size: 3rem;">ArtTube</h1>
+        </div>
+        {% include 'artTubeApp/navbar.html' %}
+        <hr>
+        <p class="text-center" style="font-family: Workbench, sans-serif; font-size: 2rem;">Admin Portal</p>
+         <div class="content text-center" >
+            <h2>Manage Submissions</h2>
+            <p>Select a submission to review.</p>
+            <table class="table table-bordered w-75 mx-auto">
+                <thead>
+                    <th scope="col">ID</th>
+                    <th scope="col">Preview</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Reviewed?</th>
+                </thead>
+                {% for s in subs %}
+                <tbody>
+                        <td> <a href="{% url 'admin_sub_view' s.id %}">{{ r.id }}</a> </td>
+                        <td> <img src="data:image/*; base64,{{ s.img_b64 }}" alt="{{ s.img_title }}" style="max-width: 100px;"> </td>
+                        <td> {{ s.img_title }} </td>
+                        <td> {{ s.img_category.name }} </td>
+                        {% if s.admin_review is not None %}
+                            <td> Yes: {{ s.admin_review.admin_id }} </td>
+                        {% else %}
+                            <td> <i><b>No</b></i> </td>
+                        {% endif %}
+                </tbody>
+                {% endfor %}
+            </table>
+        </div>
+    </body>
+</html>
