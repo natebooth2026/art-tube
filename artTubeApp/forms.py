@@ -36,6 +36,19 @@ class account_validate_questionsMFA(forms.Form):
     q_answer1 = forms.CharField(max_length=1000)
     q_answer2 = forms.CharField(max_length=1000)
 
+class account_validate_changePWD(forms.Form):
+    new_pwd = forms.CharField(widget=forms.PasswordInput(), label="New Password")
+    confirm_new_pwd = forms.CharField(widget=forms.PasswordInput(), label="Confirm New Password")
+    def clean(self):
+        cleaned_data = super().clean()
+        pwd = cleaned_data.get('new_pwd')
+        confirm = cleaned_data.get('confirm_new_pwd')
+
+        if pwd and confirm and pwd != confirm:
+            self.add_error('confirm_new_pwd', 'Password doesn\'t match.')
+
+        return cleaned_data
+    
 class CategoryChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return obj.name

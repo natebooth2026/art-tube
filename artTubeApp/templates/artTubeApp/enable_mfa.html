@@ -17,6 +17,9 @@
         {% if success %}
             <p>Security questions successfully updated!</p>
         {% endif %}
+        {% if Failure %}
+            <p>Invalid code!</p>
+        {% endif %}
         {%if form1 %}
         <h2>Enable MFA</h2>
         <p>Please enter the code sent to your email!</p>

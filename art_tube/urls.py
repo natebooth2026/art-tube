@@ -40,5 +40,6 @@ urlpatterns = [
     path('events/', views.events, name='events'),
     path('validate/', views.validate, name='verify'),
     path('mfa/', views.enable_mfa, name='mfa'),
+    path('change_pwd/', views.change_pwd, name='change_pwd'),
 ]
 
