@@ -38,6 +38,7 @@ urlpatterns = [
     path('admin/', views.admin_dashboard, name='admin'),
     path('gallery/', views.gallery, name='gallery'),
     path('events/', views.events, name='events'),
-    path('validate/', views.validate, name='verify')
+    path('validate/', views.validate, name='verify'),
+    path('mfa/', views.enable_mfa, name='mfa'),
 ]
 

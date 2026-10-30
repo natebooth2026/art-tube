@@ -5,7 +5,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from datetime import timedelta, datetime, UTC
 from django.conf import settings
 
-from .forms import account_creation, account_validate, sub_request_form, add_event, account_validate_emailMFA, request_decision
+from .forms import account_creation, account_validate, sub_request_form, add_event, account_validate_emailMFA, request_decision, account_validate_questionsSetup
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
 from .sanitize import sanitize_img
 from .log import add_log as _slog, LogType
@@ -637,3 +637,49 @@ def events(request):
                                 "event_end",
                             ))
     return render(request, 'artTubeApp/events.html', {'events': events})
+
+def enable_mfa(request):
+    form1 = account_validate_emailMFA()
+    form2 = account_validate_questionsSetup()
+    if request.method == 'GET':
+        email = request.session.get('current_user')
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        request.session["employee_code"] = code
+        #send email with code
+        send_mail(
+            "ArtTube Verification code",
+            f"code is {code}",
+            settings.EMAIL_HOST_USER,  # Uses DEFAULT_FROM_EMAIL if configured
+            [email],
+            fail_silently=False,
+        )
+        return render(request, "artTubeApp/enable_mfa.html", {'form1': form1})
+    elif request.method == 'POST':
+        if request.POST.get("action") == "submit-code":
+            form = account_validate_emailMFA(request.POST)
+            if form.is_valid():
+                email_code = form.cleaned_data.get('email_code')
+                code = request.session.get("employee_code")
+                #compare with code that was sent
+                if email_code == code:
+                    return render(request, "artTubeApp/enable_mfa.html", {'form2': form2})
+                else:
+                    return render(request, "artTubeApp/enable_mfa.html", {'form1': form1})
+        elif request.POST.get("action") == "submit-security-questions":
+            form = account_validate_questionsSetup(request.POST)
+            if form.is_valid():
+                question_1 = form.cleaned_data.get('q1')
+                answer_1 = make_password(form.cleaned_data.get('q_answer1'))
+                question_2 = form.cleaned_data.get('q2')
+                answer_2 = make_password(form.cleaned_data.get('q_answer2'))
+
+                email=request.session.get('current_user')
+                #_User.objects.filter(email=email).update(secure_q1=question_1, secure_a1=answer_1, secure_q2=question_2, secure_a2=answer_2)
+                user = _User.objects.get(email=email)
+                user.secure_q1 = question_1
+                user.secure_a1 = answer_1
+                user.secure_q2 = question_2
+                user.secure_a2 = answer_2
+                user.save(update_fields=['secure_q1', 'secure_a1', 'secure_q2', 'secure_a2'])
+                return render(request, "artTubeApp/enable_mfa.html", {'success': 1})
+    return render(request, "artTubeApp/enable_mfa.html", {'form1': form1})
