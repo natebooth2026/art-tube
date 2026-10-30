@@ -97,3 +97,19 @@ class request_decision(forms.Form):
         required=False)
     denial_reason = forms.CharField(max_length=255, required=False, label="If denied, explain:")
 
+class report_decision(forms.Form):
+    decision = forms.ChoiceField(choices=[
+        ("", "Decision..."),
+        ("verify", "Verify"),
+        ("remove", "Remove")
+    ], required=True)
+    denial_reason = forms.CharField(max_length=255, required=False, label="Explain if removal:")
+
+class switch_role(forms.Form):
+    candidate_email = forms.EmailField(required=True)
+    role = forms.ChoiceField(choices=[
+        ("", "Select Role..."),
+        ("hire", "Hire"),
+        ("fire", "Demote")
+    ], required=True)
+

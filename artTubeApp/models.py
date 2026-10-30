@@ -185,7 +185,7 @@ class Occupancy(models.Model):
 class Request(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
     employee_touch = models.IntegerField(blank=True, null=True)
-    img = models.TextField()
+    img = models.BinaryField()
     img_type = models.CharField(max_length=255)
     img_title = models.CharField(max_length=255)
     img_desc = models.CharField(max_length=1000)
@@ -208,7 +208,8 @@ class Request(models.Model):
 class Submissions(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
     approval_emp = models.ForeignKey(Employee, models.DO_NOTHING)
-    img = models.TextField()
+    admin_touch = models.IntegerField(blank=True, null=True)
+    img = models.BinaryField()
     img_type = models.CharField(max_length=255)
     img_title = models.CharField(max_length=255)
     img_desc = models.CharField(max_length=1000)

@@ -16,7 +16,7 @@
             <h1>Admin Portal</h1>
             <p>Welcome! What's on the agenda today?</p>
             <br />
-            <button>Review Submissions</button><button>Hire/Demote Employees</button><a href="{% url 'employee' %}"><button>Go to Employee Dashboard</button></a>
+            <a href="{% url 'admin_subs' %}"><button>Review Submissions</button></a><a href="{% url 'admin_roles' %}"><button>Hire/Demote Employees</button></a><a href="{% url 'employee' %}"><button>Go to Employee Dashboard</button></a>
             <br /><br />
             <button>Go to Canvas</button><button>Go Home</button>
         {% else %}
