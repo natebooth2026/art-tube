@@ -174,7 +174,7 @@ class Log(models.Model):
 
 
 class Occupancy(models.Model):
-    category = models.ForeignKey(Category, models.DO_NOTHING)
+    category = models.ForeignKey(Category, models.DO_NOTHING, blank=True, null=True)
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:
