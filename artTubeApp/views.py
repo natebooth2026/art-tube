@@ -5,9 +5,10 @@ from django.contrib.auth.hashers import make_password, check_password
 from datetime import timedelta, datetime, UTC
 
 from .forms import account_creation, account_validate, sub_request_form, add_event, request_decision, report_decision, switch_role
-from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events
+from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events, Occupancy as _Occupancy
 from .sanitize import sanitize_img
 from .log import add_log as _slog, LogType
+from ipware import get_client_ip
 
 #helper funcs
 def get_user(email):
@@ -850,6 +851,7 @@ def gallery(request):
             return redirect(f'/gallery/room/{request.session.get('room_id')}') 
 
 def gallery_room(request, id = -1):
+    
     if id < 0 or not _Category.objects.filter(id=id).exists():
         if request.session.get('current_user'):
             _slog(LogType.USER_FAILED_ENTER_ROOM, extra_info=[request, get_user(request.session.get('current_user')), id])
@@ -858,15 +860,38 @@ def gallery_room(request, id = -1):
         return redirect('gallery')
     else:
         if request.method == 'GET':
+            occupancy = _Occupancy.objects.filter(category_id=id).count()
+            if occupancy > 100:
+                return redirect('gallery')
             if not request.session.get('in_room'):
                 revoke_validations(request)
                 request.session['in_room'] = True
                 request.session['room_id'] = id
+                ip=get_client_ip(request)
+                category = _Category.objects.get(id=id)
+                user = None
+                email = request.session.get('current_user')
+                if email:
+                    user = _User.objects.get(email=request.session.get('current_user'))
+                else:
+                    user=None
+                _Occupancy.objects.update_or_create(
+                    email= user,
+                    defaults={'category': category},
+                    ip=ip,
+                )
                 if request.session.get('current_user'):
                     _slog(LogType.USER_ENTER_ROOM, extra_info=[request, get_user(request.session.get('current_user')), id])
                 else:
                     _slog(LogType.USER_ENTER_ROOM, extra_info=[request, None, id])
         elif request.method == 'POST':
+            user = None
+            email = request.session.get('current_user')
+            if email:
+                user = _User.objects.get(email=request.session.get('current_user'))
+                _Occupancy.objects.filter(email=user).delete()
+            else:
+                _Occupancy.objects.filter(ip=get_client_ip(request)).delete()
             del request.session['in_room']
             del request.session['room_id']
             if request.session.get('current_user'):
