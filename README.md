@@ -41,8 +41,13 @@ git clone https://github.com/natebooth2026/art-tube.git
                     "PORT": "3306",
                 }
             }
+      
+      - import existing database sql:
+        
+                mysql -u root -p secure_arttube < C:\path\to\your\folder\full_database_backup.sql
 5. apply database migrations
 
+        python manage.py makemigrations       
         python manage.py migrate
 6. start server
 
