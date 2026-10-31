@@ -1,0 +1,50 @@
+<html>
+<head>
+    <title>ArtTube</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Workbench&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="mx-auto p-2" style="width: 200px; font-family: Workbench, sans-serif;">
+        <h1 style="font-size: 3rem;">ArtTube</h1>
+    </div>
+    {% include 'artTubeApp/navbar.html' %}
+    <hr>
+    <div class="content text-center" >
+        {% if success %}
+            <p>Security questions successfully updated!</p>
+            <br />
+            <a href="{% url 'home' %}"><button>Go Home</button></a>
+        {% endif %}
+        {% if Failure %}
+            <p>Invalid code!</p>
+        {% endif %}
+        {%if form1 %}
+        <h2>Enable MFA</h2>
+        <p>Please enter the code sent to your email!</p>
+        <form method="post">
+            {% csrf_token %}
+            {{ form1.as_p }}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+            <button type="Submit" name="action" value="submit-code">Next</button>
+        </form>
+        {%endif%}
+        {% if form2 %}
+        <h2>Enable MFA</h2>
+        <p>Please enter security questions and answers!</p>
+        <form method="post">
+            {% csrf_token %}
+            {{ form2.as_p }}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+            <button type="Submit" name="action" value="submit-security-questions">Next</button>
+            {% if not admin_require %}
+                <button type="Submit" name="action" value="skip" formnovalidate>Skip</button>
+            {% endif %}
+        </form>
+        {%endif%}
+    </div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<html>
+    <head>
+        <title>ArtTube Canvas</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Workbench&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <div class="mx-auto p-2" style="width: 200px; font-family: Workbench, sans-serif;">
+            <h1 style="font-size: 3rem;">ArtTube</h1>
+        </div>
+        {% include 'artTubeApp/navbar.html' %}
+        <hr>
+        <h1>ArtTube Canvas</h1>
+        <a href="{% url 'studio' %}"><button>Go Back</button></a>
+        <br /> <br />
+        <h3>Cannot Make New Request At This Time</h3>
+        <p>Thank you for your contributions to ArtTube! We require users to wait at least 2 hours between submission requests.</p>
+        <br />
+        <p>Please continue to wait at least <b>{{ wait_time }}</b> before trying to make another request.</p>
+        <br />
+        <p>Thank you for your cooperation!</p>
+        <br />
+    </body>
+</html>

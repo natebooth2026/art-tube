@@ -7,15 +7,13 @@
 # Feel free to rename the models, but don't rename db_table values or field names.
 from base64 import b64encode
 from django.db import models
+from .sanitize import fernet
 
 
 class Admin(models.Model):
     email = models.OneToOneField('User', models.DO_NOTHING, db_column='email')
+    admin_id = models.AutoField(primary_key=True)
     employee = models.ForeignKey('Employee', models.DO_NOTHING)
-    secure_q1 = models.CharField(max_length=255)
-    secure_q2 = models.CharField(max_length=255)
-    secure_a1 = models.CharField(max_length=255)
-    secure_a2 = models.CharField(max_length=255)
 
     class Meta:
         managed = True
@@ -148,6 +146,7 @@ class Employee(models.Model):
     email = models.OneToOneField('User', models.DO_NOTHING, db_column='email')
     employee_id = models.AutoField(primary_key=True)
     can_approve_req = models.IntegerField()
+    deactivated = models.IntegerField(default=0)
 
     class Meta:
         managed = True
@@ -157,7 +156,7 @@ class Employee(models.Model):
 class Events(models.Model):
     event_title = models.CharField(max_length=255)
     event_start = models.DateTimeField()
-    event_end = models.DateTimeField()
+    event_end = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = True
@@ -167,7 +166,7 @@ class Events(models.Model):
 class Log(models.Model):
     time = models.DateTimeField()
     ip = models.CharField(max_length=45)
-    action = models.CharField(max_length=255)
+    action = models.CharField(max_length=1000)
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
 
     class Meta:
@@ -176,8 +175,9 @@ class Log(models.Model):
 
 
 class Occupancy(models.Model):
-    category = models.ForeignKey(Category, models.DO_NOTHING)
+    category = models.ForeignKey(Category, models.DO_NOTHING, blank=True, null=True)
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email', blank=True, null=True)
+    ip = models.CharField(max_length=45)
 
     class Meta:
         managed = True
@@ -186,6 +186,7 @@ class Occupancy(models.Model):
 
 class Request(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
+    employee_touch = models.IntegerField(blank=True, null=True)
     img = models.BinaryField()
     img_type = models.CharField(max_length=255)
     img_title = models.CharField(max_length=255)
@@ -194,7 +195,7 @@ class Request(models.Model):
     admin_approve = models.IntegerField()
     denied = models.IntegerField()
     denial_reason = models.CharField(max_length=255, blank=True, null=True)
-    time = models.DateTimeField()
+    time = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = True
@@ -202,27 +203,29 @@ class Request(models.Model):
 
     def img_b64(self):
         if self.img:
-            return b64encode(bytes(self.img)).decode('utf-8')
+            return b64encode(bytes(fernet.decrypt(self.img))).decode('utf-8')
         return None
 
 
 class Submissions(models.Model):
     email = models.ForeignKey('User', models.DO_NOTHING, db_column='email')
     approval_emp = models.ForeignKey(Employee, models.DO_NOTHING)
+    admin_touch = models.IntegerField(blank=True, null=True)
     img = models.BinaryField()
     img_type = models.CharField(max_length=255)
     img_title = models.CharField(max_length=255)
     img_desc = models.CharField(max_length=1000)
     approved_category = models.ForeignKey(Category, models.DO_NOTHING, db_column='approved_category')
+    admin_review = models.ForeignKey(Admin, models.DO_NOTHING, db_column='admin_review', blank=True, null=True)
 
     class Meta:
         managed = True
         db_table = 'submissions'
 
     def img_b64(self):
-            if self.img:
-                return b64encode(bytes(self.img)).decode('utf-8')
-            return None
+        if self.img:
+            return b64encode(bytes(self.img)).decode('utf-8')
+        return None
 
 
 class User(models.Model):
@@ -232,6 +235,10 @@ class User(models.Model):
     admin_approve = models.IntegerField()
     locked = models.IntegerField()
     number_2fa = models.IntegerField(db_column='2FA')  # Field name made lowercase. Field renamed because it wasn't a valid Python identifier.
+    secure_q1 = models.CharField(max_length=255, blank=True, null=True)
+    secure_q2 = models.CharField(max_length=255, blank=True, null=True)
+    secure_a1 = models.CharField(max_length=255, blank=True, null=True)
+    secure_a2 = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         managed = True

@@ -3,6 +3,10 @@
 import os
 import sys
 
+#LOCAL TESTING ONLY
+from dotenv import load_dotenv
+load_dotenv()
+#
 
 def main():
     """Run administrative tasks."""

@@ -27,9 +27,22 @@ urlpatterns = [
     path('canvas/', views.studio_page, name='studio'),
     path('canvas/request/<int:id>', views.request_view, name='studio_req_view'),
     path('canvas/submission/<int:id>', views.sub_view, name='studio_sub_view'),
+    path('canvas/request/', views.submit_request_page, name='studio_new_req'),
+    path('canvas/request/success', views.request_submitted, name='studio_req_success'),
+    path('canvas/request/wait', views.request_wait, name='studio_wait_req'),
+    path('canvas/denied_requests', views.denied_reqs, name='studio_denied_reqs'),
     path('employee/', views.emp_dashboard, name='employee'),
+    path('employee/events', views.emp_events, name='emp_events'),
+    path('employee/requests', views.emp_requests_landing, name="emp_requests"),
+    path('employee/requests/<int:id>', views.emp_request_view, name="emp_req_view"),
     path('admin/', views.admin_dashboard, name='admin'),
+    path('admin/submissions', views.admin_submissions_landing, name="admin_subs"),
+    path('admin/submissions/<int:id>', views.admin_submission_view, name="admin_sub_view"),   
+    path('admin/switch_role', views.admin_switch_roles, name="admin_roles"),  
     path('gallery/', views.gallery, name='gallery'),
     path('events/', views.events, name='events'),
+    path('validate/', views.validate, name='verify'),
+    path('gallery/room/<int:id>/', views.gallery_room, name='gallery_room'),
+    path('mfa/', views.enable_mfa, name='mfa'),
+    path('change_pwd/', views.change_pwd, name='change_pwd')
 ]
-

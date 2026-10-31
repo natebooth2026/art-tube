@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Django migrations are source files and should be committed.
+art_tube/settings copy.py
