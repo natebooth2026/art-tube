@@ -977,6 +977,7 @@ def gallery_room(request, id = -1):
                 _Occupancy.objects.filter(ip=get_client_ip(request)).delete()
             del request.session['in_room']
             del request.session['room_id']
+
             if request.session.get('current_user'):
                 _slog(LogType.USER_LEAVE_ROOM, extra_info=[request, get_user(request.session.get('current_user')), id])
             else:

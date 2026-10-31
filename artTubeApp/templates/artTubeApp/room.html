@@ -21,7 +21,7 @@
         <hr>
         <p class="text-center" style="font-family: Workbench, sans-serif; font-size: 2rem;">Welcome!</p>
         <div class="container d-flex justify-content-center align-items-center" style="width: 200px; font-family: Workbench, sans-serif;">
-            <form action="{% url 'gallery_room' id=1 %}" method="post" style="display:inline;">
+            <form method="post" style="display:inline;">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-primary">Exit Room</button>
             </form>
