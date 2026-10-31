@@ -24,17 +24,30 @@ class account_validate(forms.Form):
     pwd = forms.CharField(widget=forms.PasswordInput(), label="Password")
 
 class account_validate_emailMFA(forms.Form):
-    email_code = forms.CharField(widget=forms.PasswordInput())
+    email_code = forms.CharField(max_length=6)
+
+class account_validate_changePWD(forms.Form):
+    new_pwd = forms.CharField(widget=forms.PasswordInput(), label="New Password")
+    confirm_new_pwd = forms.CharField(widget=forms.PasswordInput(), label="Confirm New Password")
+    def clean(self):
+        cleaned_data = super().clean()
+        pwd = cleaned_data.get('new_pwd')
+        confirm = cleaned_data.get('confirm_new_pwd')
+
+        if pwd and confirm and pwd != confirm:
+            self.add_error('confirm_new_pwd', 'Password doesn\'t match.')
+
+        return cleaned_data
 
 class account_validate_questionsSetup(forms.Form):
     q1 = forms.CharField(max_length=100)
-    q_answer1 = forms.CharField(max_length=1000)
+    q_answer1 = forms.CharField(max_length=1000, label="A1")
     q2 = forms.CharField(max_length=100)
-    q_answer2 = forms.CharField(max_length=1000)
+    q_answer2 = forms.CharField(max_length=1000, label="A2")
 
 class account_validate_questionsMFA(forms.Form):
-    q_answer1 = forms.CharField(max_length=1000)
-    q_answer2 = forms.CharField(max_length=1000)
+    q_answer1 = forms.CharField(max_length=1000, label="Answer #1")
+    q_answer2 = forms.CharField(max_length=1000, label="Answer #2")
 
 class account_validate_changePWD(forms.Form):
     new_pwd = forms.CharField(widget=forms.PasswordInput(), label="New Password")

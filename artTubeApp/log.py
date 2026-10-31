@@ -70,6 +70,7 @@ class LogType(Enum):
     EMPLOYEE_DISABLED_SECURE_Q = 62
     EMPLOYEE_FAILED_DISABLE_SECURE_Q = 63
     USER_FAILED_ACCESS_VIEW = 64
+    USER_FAILED_ENTER_ROOM = 65
 
 def add_log(_event = LogType.NONE, _time = datetime.now(UTC), _givenTime = False, extra_info = []):
     if not _givenTime:
@@ -422,20 +423,41 @@ def add_log(_event = LogType.NONE, _time = datetime.now(UTC), _givenTime = False
             action=f"User/guest left room \"{extra_info[2]}\"",
             email=extra_info[1]
         )
+    elif _event is LogType.USER_FAILED_ENTER_ROOM:
+        _Log.objects.create(
+            time=_time,
+            ip=get_client_ip(extra_info[0]),
+            action=f"User/guest failed to enter room \"{extra_info[2]}\"",
+            email=extra_info[1]
+        )
     elif _event is LogType.USER_ENTER_GALLERY:
-        _Log.objects.create(
-            time=_time,
-            ip=get_client_ip(extra_info[0]),
-            action=f"User/guest entered the gallery",
-            email=extra_info[1]
-        )
+        if extra_info[1] is not None:
+            _Log.objects.create(
+                time=_time,
+                ip=get_client_ip(extra_info[0]),
+                action=f"User/guest entered the gallery",
+                email=extra_info[1]
+            )
+        else:
+            _Log.objects.create(
+                time=_time,
+                ip=get_client_ip(extra_info[0]),
+                action=f"User/guest entered the gallery"
+            )
     elif _event is LogType.USER_LEAVE_GALLERY:
-        _Log.objects.create(
-            time=_time,
-            ip=get_client_ip(extra_info[0]),
-            action=f"User/guest left the gallery",
-            email=extra_info[1]
-        )
+        if extra_info[1] is not None:
+            _Log.objects.create(
+                time=_time,
+                ip=get_client_ip(extra_info[0]),
+                action=f"User/guest entered the gallery",
+                email=extra_info[1]
+            )
+        else:
+            _Log.objects.create(
+                time=_time,
+                ip=get_client_ip(extra_info[0]),
+                action=f"User/guest entered the gallery"
+            )
     elif _event is LogType.USER_ATTEMPT_INVALID_ENTER:
         _Log.objects.create(
             time=_time,

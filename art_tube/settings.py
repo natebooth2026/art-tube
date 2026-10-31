@@ -20,8 +20,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# File encryption key
-SECRET_KEY = os.environ.get("SECRET_KEY")
+# File encryption key, required to be 
+SECRET_KEY = "nwSMrgyE6NtT5bR7URNTYAo57ihBAKloIQ2mT_35mUM="
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
