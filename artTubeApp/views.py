@@ -906,7 +906,9 @@ def gallery_room(request, id = -1):
                 submission.img = (
                     f"data:{submission.img_type};base64,{binary_image}"
                 )
-        return render(request, 'artTubeApp/room.html', {'cat_name': True, 'submissions': submissions})
+        #update occupancy
+        occupancy = _Occupancy.objects.filter(category_id=id).count()
+        return render(request, 'artTubeApp/room.html', {'cat_name': True, 'submissions': submissions, 'occupancy': occupancy})
 
 def events(request):
     if request.method == 'GET':
