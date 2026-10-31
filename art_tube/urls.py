@@ -41,5 +41,6 @@ urlpatterns = [
     path('admin/switch_role', views.admin_switch_roles, name="admin_roles"),  
     path('gallery/', views.gallery, name='gallery'),
     path('events/', views.events, name='events'),
-    path('validate/', views.validate, name='verify')
+    path('validate/', views.validate, name='verify'),
+    path('gallery/room/<int:id>/', views.gallery_room, name='gallery_room'),
 ]

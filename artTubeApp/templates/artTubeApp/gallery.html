@@ -19,7 +19,14 @@
         </div>
         {% include 'artTubeApp/navbar.html' %}
         <hr>
-        <p class="text-center" style="font-family: Workbench, sans-serif; font-size: 2rem;">Welcome to the Gallery!</p>
+        <p class="text-center" style="font-family: Workbench, sans-serif; font-size: 2rem;">Welcome to the Gallery! </br>
+            {% for c in categories %}
+                <a href="{% url 'gallery_room' id=c.id %}" class="text-decoration-none"> <button type="button" class="btn btn-primary">{{c.name}} Room</button> </a>
+            {% endfor %}
+        </p>
+            
+            
+            
         <!-- carousel -->
             <div id="carouselExampleAutoplaying" class="carousel slide" data-bs-ride="carousel">
                 <div class="carousel-inner w-75 mx-auto">
