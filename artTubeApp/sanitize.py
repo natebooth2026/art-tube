@@ -2,6 +2,10 @@ from uuid import uuid4
 from PIL import Image
 from io import BytesIO
 from django.core.files.base import ContentFile
+from django.conf import settings
+from cryptography.fernet import Fernet
+
+fernet = Fernet(settings.SECRET_KEY)
 
 def sanitize_img(img_file):
     FORMAT_MAP = {
@@ -30,4 +34,4 @@ def sanitize_img(img_file):
         ostream.seek(0)
 
         clean_name = f"{uuid4()}.{ext}"
-        return ContentFile(ostream.read(), name=clean_name), ext
+        return ContentFile(fernet.encrypt(ostream.read()), name=clean_name), ext
