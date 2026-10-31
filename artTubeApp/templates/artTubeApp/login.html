@@ -15,13 +15,31 @@
     <hr>
     <div class="content text-center" >
         <h2>Login</h2>
+        {% if resent %}
+            <i><p>Resent by user request or bad attempt! Check your spam folder if you cannot locate the email!</p></i>
+        {% endif %}
+        {% if err %}
+            <i>{{ error_msg }}</i>
+        {% endif %}
         <form method="post">
             {% csrf_token %}
+            {% if secure_q %}
+                <p>Please answer the following questions:</p>
+                1. {{ q1 }}
+                <br />
+                2. {{ q2 }}
+                <br /><br />
+            {% endif %}
             {{ form.as_p }}
             <input type="hidden" name="next" value="{{ request.GET.next }}">
+            {% if email_code %}
+                <button type="submit" value="skip" formnovalidate>Resend Code</button>
+            {% endif %}
             <button type="Submit">Log In</button>
         </form>
-        Don't have an account? <a href="{% url 'signup' %}"><button>Go to Sign Up</button></a>
+        {% if not request.session.attempt_user_obj %}
+            Don't have an account? <a href="{% url 'signup' %}"><button>Go to Sign Up</button></a>
+        {% endif %}
     </div>
 </body>
 </html>

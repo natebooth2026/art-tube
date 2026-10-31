@@ -16,6 +16,8 @@
     <div class="content text-center" >
         {% if success %}
             <p>Security questions successfully updated!</p>
+            <br />
+            <a href="{% url 'home' %}"><button>Go Home</button></a>
         {% endif %}
         {% if Failure %}
             <p>Invalid code!</p>
@@ -38,6 +40,9 @@
             {{ form2.as_p }}
             <input type="hidden" name="next" value="{{ request.GET.next }}">
             <button type="Submit" name="action" value="submit-security-questions">Next</button>
+            {% if not admin_require %}
+                <a href="{% url 'home' %}"><button>Skip</button></a>
+            {% endif %}
         </form>
         {%endif%}
     </div>
