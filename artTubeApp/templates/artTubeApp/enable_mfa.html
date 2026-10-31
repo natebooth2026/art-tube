@@ -41,7 +41,7 @@
             <input type="hidden" name="next" value="{{ request.GET.next }}">
             <button type="Submit" name="action" value="submit-security-questions">Next</button>
             {% if not admin_require %}
-                <a href="{% url 'home' %}"><button>Skip</button></a>
+                <button type="Submit" name="action" value="skip" formnovalidate>Skip</button>
             {% endif %}
         </form>
         {%endif%}

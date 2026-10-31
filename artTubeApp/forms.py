@@ -41,9 +41,9 @@ class account_validate_changePWD(forms.Form):
 
 class account_validate_questionsSetup(forms.Form):
     q1 = forms.CharField(max_length=100)
-    q_answer1 = forms.CharField(max_length=1000)
+    q_answer1 = forms.CharField(max_length=1000, label="A1")
     q2 = forms.CharField(max_length=100)
-    q_answer2 = forms.CharField(max_length=1000)
+    q_answer2 = forms.CharField(max_length=1000, label="A2")
 
 class account_validate_questionsMFA(forms.Form):
     q_answer1 = forms.CharField(max_length=1000, label="Answer #1")

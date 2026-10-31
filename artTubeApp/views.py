@@ -1024,6 +1024,12 @@ def enable_mfa(request):
                 user.save(update_fields=['secure_q1', 'secure_a1', 'secure_q2', 'secure_a2'])
                 _slog(LogType.USER_ENABLE_MFA_SECURE_Q, extra_info=[request, get_user(request.session.get('current_user'))])
                 return render(request, "artTubeApp/enable_mfa.html", {'success': 1})
+        elif request.POST.get("action") == "skip":
+            if not _Admin.objects.filter(email=request.session.get('current_user')).exists():
+                return redirect('home')
+            else:
+                _slog(LogType.USER_FAILED_ENABLE_MFA, extra_info=[request, get_user(request.session.get('current_user'))])
+                return render(request, "artTubeApp/enable_mfa.html", {'form2': form2, 'failure': 1})
     return render(request, "artTubeApp/enable_mfa.html", {'form1': form1})
 
 def change_pwd(request):
