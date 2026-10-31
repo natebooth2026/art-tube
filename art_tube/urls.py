@@ -42,6 +42,7 @@ urlpatterns = [
     path('gallery/', views.gallery, name='gallery'),
     path('events/', views.events, name='events'),
     path('validate/', views.validate, name='verify'),
+    path('gallery/room/<int:id>/', views.gallery_room, name='gallery_room'),
     path('mfa/', views.enable_mfa, name='mfa'),
     path('change_pwd/', views.change_pwd, name='change_pwd')
 ]

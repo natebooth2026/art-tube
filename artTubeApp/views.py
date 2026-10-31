@@ -11,6 +11,7 @@ from .forms import account_creation, account_validate, sub_request_form, add_eve
 from .models import User as _User, Employee as _Employee, Admin as _Admin, Request as _Request, Submissions as _Submissions, Category as _Category, Events as _Events, Occupancy as _Occupancy
 from .sanitize import sanitize_img
 from .log import add_log as _slog, LogType
+from ipware import get_client_ip
 
 #helper funcs
 def get_user(email):
@@ -906,9 +907,22 @@ def gallery(request):
         if request.session.get('in_room'):
             return redirect(f'/gallery/room/{request.session.get('room_id')}')
 
-        categories = _Category.objects.values_list('name', flat=True)
-
-        return render(request, 'artTubeApp/gallery.html', {'categories': categories})
+        categories = _Category.objects.all()
+        submissions = list(_Submissions.objects.values(
+                    "img",
+                    "img_type",
+                    "img_title",
+                    "img_desc",
+                ))
+        
+        #convert LONGBLOB to image
+        for submission in submissions:
+            binary_image = b64encode(submission["img"]).decode("ascii")
+            submission["img"] = (
+                f"data:{submission['img_type']};base64,{binary_image}"
+            )
+        
+        return render(request, 'artTubeApp/gallery.html', {'submissions': submissions, 'categories': categories})
     if request.method == 'POST':
         if not request.session.get('in_room'):
             del request.session['in_gallery']
@@ -929,17 +943,38 @@ def gallery_room(request, id = -1):
         return redirect('gallery')
     else:
         if request.method == 'GET':
+            occupancy = _Occupancy.objects.filter(category_id=id).count()
+            if occupancy > 100:
+                return redirect('gallery')
             if not request.session.get('in_room'):
                 revoke_validations(request)
                 request.session['in_room'] = True
                 request.session['room_id'] = id
+                ip=get_client_ip(request)
+                category = _Category.objects.get(id=id)
+                user = None
+                email = request.session.get('current_user')
+                if email:
+                    user = _User.objects.get(email=request.session.get('current_user'))
+                else:
+                    user=None
+                _Occupancy.objects.update_or_create(
+                    email= user,
+                    defaults={'category': category},
+                    ip=ip,
+                )
                 if request.session.get('current_user'):
                     _slog(LogType.USER_ENTER_ROOM, extra_info=[request, get_user(request.session.get('current_user')), id])
                 else:
                     _slog(LogType.USER_ENTER_ROOM, extra_info=[request, None, id])
-            else:
-                return redirect(f'/gallery/room/{request.session.get('room_id')}')
         elif request.method == 'POST':
+            user = None
+            email = request.session.get('current_user')
+            if email:
+                user = _User.objects.get(email=request.session.get('current_user'))
+                _Occupancy.objects.filter(email=user).delete()
+            else:
+                _Occupancy.objects.filter(ip=get_client_ip(request)).delete()
             del request.session['in_room']
             del request.session['room_id']
             if request.session.get('current_user'):
@@ -947,7 +982,14 @@ def gallery_room(request, id = -1):
             else:
                 _slog(LogType.USER_LEAVE_ROOM, extra_info=[request, None, id])
             return redirect('gallery')
-        return render(request, 'artTubeApp/gallery_room.html', {'cat_name': True, 'items': _Submissions.objects.filter(category=id)})
+        
+        submissions = _Submissions.objects.filter(approved_category=id)
+        for submission in submissions:
+                binary_image = b64encode(submission.img).decode("ascii")
+                submission.img = (
+                    f"data:{submission.img_type};base64,{binary_image}"
+                )
+        return render(request, 'artTubeApp/room.html', {'cat_name': True, 'submissions': submissions})
 
 def events(request):
     if request.method == 'GET':

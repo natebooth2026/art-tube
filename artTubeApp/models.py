@@ -180,7 +180,7 @@ class Occupancy(models.Model):
     ip = models.CharField(max_length=45)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'occupancy'
 
 
