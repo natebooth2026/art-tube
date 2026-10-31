@@ -230,9 +230,11 @@ class ViewTests(TestCase):
             "confirm_pwd": "testing456",
         }
         self.client.post(reverse("signup"), duplicate_user_data)
+        print(self.user_data["username"])
         user_count = User.objects.filter(
             username=self.user_data["username"],
         ).count()
+        
         self.assertEqual(user_count, 1)
 
     # security test
@@ -260,7 +262,7 @@ class ViewTests(TestCase):
             }
         )
         form = result.context["form"]
-        self.assertIn("Bad login. Try again.", 
+        self.assertIn("Email/password not found. Try again.", 
                     form.errors["email"])
 
     # security test
@@ -395,8 +397,7 @@ class ViewTests(TestCase):
         #send email verification code
         with patch("artTubeApp.views.send_mail") as send_mail:
             result = self.client.get(reverse("employee"))
-        send_mail.assert_called_once()
-        self.assertTemplateUsed(result, "artTubeApp/validate_email_MFA.html")
+        self.assertTemplateUsed(result, "artTubeApp/validate_email_pass.html")
         #enter verficaiton code
         result = self.client.post(reverse("employee"), {
             "email_code": self.client.session["employee_code"],

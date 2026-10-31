@@ -54,6 +54,7 @@ def login(request):
             form2 = account_validate_emailMFA()
             form3 = account_validate_questionsMFA()
         elif request.method == 'POST':
+            request.session.cycle_key()
             form = account_validate(request.POST)
             form2 = account_validate_emailMFA(request.POST)
             form3 = account_validate_questionsMFA(request.POST)
@@ -61,11 +62,14 @@ def login(request):
                 _email = form.cleaned_data.get('email')
                 _password = form.cleaned_data.get('pwd')
 
-                users = _User.objects.get(email=_email)
+                if _User.objects.filter(email=_email).exists():
+                    users = _User.objects.get(email=_email)
+                else:
+                    users = None
 
                 if not users:
                     form.add_error('email', 'Email is not associated with an account. Please create a new account or try another email.')
-                    _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request])
+                    _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request, _email])
                 elif check_password(_password, users.password):
                     next_page = request.POST.get('next') or request.GET.get('next') or '/'
                     if users.number_2fa == 0:
