@@ -24,9 +24,14 @@
                 <a href="{% url 'gallery_room' id=c.id %}" class="text-decoration-none"> <button type="button" class="btn btn-primary">{{c.name}} Room</button> </a>
             {% endfor %}
         </p>
-            
-            
-            
+        <div class="container d-flex justify-content-center align-items-center" style="width: 200px; font-family: Workbench, sans-serif;">
+            <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">Exit Gallery</button>
+            </form>
+        </div>
+        <p class="text-center" style="font-family: Workbench, sans-serif; font-size: 1rem;">Current Occupancy:  {{occupancy}}/100</p>
+
         <!-- carousel -->
             <div id="carouselExampleAutoplaying" class="carousel slide" data-bs-ride="carousel">
                 <div class="carousel-inner w-75 mx-auto">

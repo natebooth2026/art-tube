@@ -895,7 +895,11 @@ def denied_reqs(request):
         return redirect('/login?next=/canvas/denied_requests')
 
 def gallery(request):
+    request.session['in_gallery'] = False
     if request.method == 'GET':
+        occupancy = _Occupancy.objects.filter(category_id=None).count()
+        if occupancy > 100:
+            return redirect('home')
         revoke_validations(request)
         if not request.session['in_gallery']:
             request.session['in_gallery'] = True
@@ -921,9 +925,30 @@ def gallery(request):
             submission["img"] = (
                 f"data:{submission['img_type']};base64,{binary_image}"
             )
-        
-        return render(request, 'artTubeApp/gallery.html', {'submissions': submissions, 'categories': categories})
+        user = None
+        email = request.session.get('current_user')
+        if email:
+            user = _User.objects.get(email=request.session.get('current_user'))
+        else:
+            user=None
+        ip=get_client_ip(request)
+        #updatee occupancy of gallery
+        _Occupancy.objects.update_or_create(
+            email= user,
+            defaults={'category': None},
+            ip=ip,
+        )
+        #update occupancy
+        occupancy = _Occupancy.objects.filter(category_id=None).count()
+        return render(request, 'artTubeApp/gallery.html', {'submissions': submissions, 'categories': categories, 'occupancy': occupancy})
     if request.method == 'POST':
+        user = None
+        email = request.session.get('current_user')
+        if email:
+            user = _User.objects.get(email=request.session.get('current_user'))
+            _Occupancy.objects.filter(email=user).delete()
+        else:
+            _Occupancy.objects.filter(ip=get_client_ip(request)).delete()
         if not request.session.get('in_room'):
             del request.session['in_gallery']
             if not request.session.get('current_user'):
@@ -972,9 +997,9 @@ def gallery_room(request, id = -1):
             email = request.session.get('current_user')
             if email:
                 user = _User.objects.get(email=request.session.get('current_user'))
-                _Occupancy.objects.filter(email=user).delete()
+                _Occupancy.objects.filter(email=user).update(category=None)
             else:
-                _Occupancy.objects.filter(ip=get_client_ip(request)).delete()
+                _Occupancy.objects.filter(ip=get_client_ip(request)).update(category=None)
             del request.session['in_room']
             del request.session['room_id']
             if request.session.get('current_user'):
