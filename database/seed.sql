@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.1
+-- version 5.2.3
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Nov 06, 2026 at 06:41 PM
--- Server version: 13.0.2-MariaDB
--- PHP Version: 8.2.12
+-- Host: db
+-- Generation Time: Nov 06, 2026 at 07:45 PM
+-- Server version: 13.0.2-MariaDB-ubu2604
+-- PHP Version: 8.3.36
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -25,10 +25,10 @@ SET time_zone = "+00:00";
 -- Dumping data for table `admin`
 --
 
-INSERT INTO `admin` (`secure_q1`, `secure_q2`, `secure_a1`, `secure_a2`, `employee_id`, `email`, `admin_id`) VALUES
-('Demo question one', 'Demo question two', 'Demo answer one', 'Demo answer two', 1, 'demo@example.com', 1),
-('Your first question', 'Your second question', 'A non-sensitive answer', 'Another non-sensitive answer', 2, 'user@gmail.com', 2),
-('Sample security question one', 'Sample security question two', 'Sample answer one', 'Sample answer two', 6, 'admin@gmail.com', 3);
+INSERT INTO `admin` (`employee_id`, `email`, `admin_id`) VALUES
+(1, 'demo@example.com', 1),
+(2, 'user@gmail.com', 2),
+(6, 'admin@gmail.com', 3);
 
 --
 -- Dumping data for table `auth_permission`
@@ -225,6 +225,7 @@ INSERT INTO `django_session` (`session_key`, `session_data`, `expire_date`) VALU
 ('bfou9lb3nju9gtrwgu0xf2e1b3v6rugn', 'eyJpbl9nYWxsZXJ5Ijp0cnVlfQ:1xMuXI:04Gby3TqUTlCoxVK72EHd4yopXfbl-3wrWE_XaWglhQ', '2026-11-13 21:53:20.291286'),
 ('ora0k7j2rf59ta7x8a7avf8jcft9pjiv', 'eyJjdXJyZW50X3VzZXIiOiJ1c2VyQGdtYWlsLmNvbSJ9:1xEYDN:e2ISvZ1UUbi6NevBbLjlZcD7DV7zcEVBCY7Bby97Q2k', '2026-10-21 20:26:13.823745'),
 ('plvty9m1rc70v5i2d8o7smmpp8iwev3h', 'eyJpbl9nYWxsZXJ5Ijp0cnVlfQ:1xMuXq:bIaZmlir3aHPrEmgJXmCVGofnltDvupR7zYNJ2l7BKU', '2026-11-13 21:53:54.284500'),
+('qx1myhb3pwqivqjkgmw1hx4uvo4g90pg', 'eyJjdXJyZW50X3VzZXIiOiJuYm9vdGg1QGtlbnQuZWR1IiwiZW1wbG95ZWVfY29kZSI6IjU1MDg3OCJ9:1xPPUK:3XvRUr3kPFWMelxeGFDqKdg9SnrBycmBBq8AeEeknwA', '2026-11-20 19:20:36.129679'),
 ('zknmdwag65totnluechh9qv2s0yjy66h', 'eyJpbl9nYWxsZXJ5Ijp0cnVlfQ:1xMzog:8ZjiDjhFfiLbN8X5mxwu-puyUaTF43zhjNiW3SKTx9s', '2026-11-14 03:31:38.938824');
 
 --
@@ -735,14 +736,20 @@ INSERT INTO `log` (`id`, `time`, `ip`, `action`, `email`) VALUES
 (457, '2026-10-31 03:10:11.091107', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
 (458, '2026-10-31 03:10:44.267723', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
 (459, '2026-10-31 03:10:58.292998', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
-(460, '2026-10-31 03:31:38.911792', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL);
-
---
--- Dumping data for table `occupancy`
---
-
-INSERT INTO `occupancy` (`id`, `ip`, `category_id`, `email`) VALUES
-(38, '(\'127.0.0.1\', False)', NULL, NULL);
+(460, '2026-10-31 03:31:38.911792', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
+(461, '2026-11-06 19:04:07.510792', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
+(462, '2026-11-06 19:10:05.632734', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
+(463, '2026-11-06 19:10:24.859302', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
+(464, '2026-11-06 19:12:37.277037', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
+(465, '2026-11-06 19:13:34.380497', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
+(466, '2026-11-06 19:14:01.771521', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
+(467, '2026-11-06 19:15:17.684282', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
+(468, '2026-11-06 19:15:24.341195', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
+(469, '2026-11-06 19:15:27.672348', '(\'127.0.0.1\', False)', 'User/guest entered the gallery', NULL),
+(470, '2026-11-06 19:20:06.799294', '(\'127.0.0.1\', False)', 'Successfully created account', 'nbooth5@kent.edu'),
+(471, '2026-11-06 19:20:16.928801', '(\'127.0.0.1\', False)', 'Logged in to', 'nbooth5@kent.edu'),
+(472, '2026-11-06 19:20:52.979281', '(\'127.0.0.1\', False)', 'User successfully enabled MFA', 'nbooth5@kent.edu'),
+(473, '2026-11-06 19:23:07.789541', '(\'127.0.0.1\', False)', 'User attempted to access employee dashboard', 'nbooth5@kent.edu');
 
 --
 -- Dumping data for table `request`

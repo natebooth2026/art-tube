@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.1
+-- version 5.2.3
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Nov 06, 2026 at 06:40 PM
--- Server version: 13.0.2-MariaDB
--- PHP Version: 8.2.12
+-- Host: db
+-- Generation Time: Nov 06, 2026 at 07:45 PM
+-- Server version: 13.0.2-MariaDB-ubu2604
+-- PHP Version: 8.3.36
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -28,10 +28,6 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `admin` (
-  `secure_q1` varchar(255) NOT NULL,
-  `secure_q2` varchar(255) NOT NULL,
-  `secure_a1` varchar(255) NOT NULL,
-  `secure_a2` varchar(255) NOT NULL,
   `employee_id` int(11) NOT NULL,
   `email` varchar(255) NOT NULL,
   `admin_id` int(11) NOT NULL
