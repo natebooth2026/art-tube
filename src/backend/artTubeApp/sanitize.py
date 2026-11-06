@@ -5,7 +5,7 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 from cryptography.fernet import Fernet
 
-fernet = Fernet(settings.SECRET_KEY)
+fernet = Fernet(settings.FILE_CRYPT_KEY)
 
 def sanitize_img(img_file):
     FORMAT_MAP = {
