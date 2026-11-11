@@ -35,7 +35,7 @@
                 {% for s in submissions %}
                     <div class="col-3">
                         <div class="card" style="width: 15rem; height: 20rem;">
-                            <img src="data:image/*; base64,{{ item.img_b64 }}" alt="{{ view_item.img_title }}" style="padding: 0.5em; border: 0.25rem solid rgb(113, 84, 50); width: 15rem; height: 12rem; object-fit: contain; background-color: rgb(241, 240, 240);">
+                            <img src="data:image/*; base64,{{ s.img_b64 }}" alt="{{ s.img_title }}" style="padding: 0.5em; border: 0.25rem solid rgb(113, 84, 50); width: 15rem; height: 12rem; object-fit: contain; background-color: rgb(241, 240, 240);">
                             
                             <div class="card-body">
                                 <p class="card-text">
