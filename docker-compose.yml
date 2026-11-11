@@ -12,7 +12,7 @@ services:
       - "127.0.0.1:3306:3306"
 
     volumes:
-      - ./database/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+      - ./database:/docker-entrypoint-initdb.d:ro
       - mariadb_data:/var/lib/mysql
 
   phpmyadmin:
