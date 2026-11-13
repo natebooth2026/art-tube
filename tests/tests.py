@@ -3,10 +3,10 @@ from io import BytesIO
 from django.test import Client, TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
-from .forms import add_event, account_creation, account_validate, sub_request_form
+from ..src.backend.artTubeApp.forms import add_event, account_creation, account_validate, sub_request_form
 from django.contrib.auth.hashers import check_password
 from django.urls import reverse
-from .models import Category, User, Employee, Admin, Events, Request
+from ..src.backend.artTubeApp.models import Category, User, Employee, Admin, Events, Request
 import datetime
 from unittest.mock import patch
 
