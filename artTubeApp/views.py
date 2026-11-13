@@ -189,7 +189,7 @@ def signup(request):
                     form.add_error('username', 'Username has been taken.')
                 if _User.objects.filter(email=email).exists():
                     _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
-                    form.add_error('email', 'Email already registered.')
+                    form.add_error('email', 'Failed to create account')
                 else:
                     _User.objects.create(
                         username=username,
