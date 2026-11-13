@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import send_mail
 from django.conf import settings
+from django.utils.http import url_has_allowed_host_and_scheme
 from datetime import timedelta, datetime, UTC
 
 from .forms import account_creation, account_validate, sub_request_form, add_event, request_decision, report_decision, switch_role, account_validate_changePWD, account_validate_emailMFA, account_validate_questionsMFA, account_validate_questionsSetup
@@ -71,7 +72,10 @@ def login(request):
                     form.add_error('email', 'Email is not associated with an account. Please create a new account or try another email.')
                     _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request, _email])
                 elif check_password(_password, users.password):
-                    next_page = request.POST.get('next') or request.GET.get('next') or '/'
+                    next_page = request.POST.get('next') or request.GET.get('next')
+                    #validate next
+                    if not url_has_allowed_host_and_scheme(next_page, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+                        next_page = "/"
                     if users.number_2fa == 0:
                         request.session['current_user'] = users.email
                         _slog(LogType.ACCOUNT_LOGIN, extra_info=[request, users])
@@ -95,7 +99,10 @@ def login(request):
                     form.add_error('email', 'Email/password not found. Try again.')
                     _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, users])
             elif form2.is_valid():
-                next_page = request.POST.get('next') or request.GET.get('next') or '/'
+                next_page = request.POST.get('next') or request.GET.get('next')
+                 #validate next
+                if not url_has_allowed_host_and_scheme(next_page, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+                    next_page = "/"
                 _code = form2.cleaned_data.get('email_code')
                 if _code == request.session.get('employee_code'):
                     if get_user(request.session.get('attempt_user_obj')).secure_q1 is not None:
@@ -122,7 +129,10 @@ def login(request):
                     _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, get_user(request.session.get('attempt_user_obj'))])
                     return render(request, 'artTubeApp/login.html', {'form': form2,'email_code': True, 'err': True, 'error_msg': 'Code is incorrect. We sent another, try again.'})
             elif form3.is_valid():
-                next_page = request.POST.get('next') or request.GET.get('next') or '/'
+                next_page = request.POST.get('next') or request.GET.get('next')
+                #validate next
+                if not url_has_allowed_host_and_scheme(next_page, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+                    next_page = "/"
                 _a1 = form3.cleaned_data.get('q_answer1')
                 _a2 = form3.cleaned_data.get('q_answer2')
                 if not check_password(_a1, get_user(request.session.get('attempt_user_obj')).secure_a1) or not check_password(_a2, get_user(request.session.get('attempt_user_obj')).secure_a2):
@@ -666,7 +676,10 @@ def validate(request):
                 else:
                     return redirect('employee')
         if request.method == 'POST' and _Employee.objects.filter(email=request.session.get('current_user')).exists():
-            next_page = request.POST.get('next') or request.GET.get('next') or '/'
+            next_page = request.POST.get('next') or request.GET.get('next')
+            #validate next
+            if not url_has_allowed_host_and_scheme(next_page, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+                next_page = "/"
             form = account_validate(request.POST)
             if form.is_valid():
                 _email = form.cleaned_data.get('email')
