@@ -322,7 +322,36 @@ def emp_requests_landing(request):
             else:
                 _slog(LogType.ADMIN_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, "requests"])
             remove_emp_touch(request)
-            requests = _Request.objects.filter(employee_touch__isnull=True, admin_approve=0, denied=0).exclude(email=request.session.get('current_user'))
+            requests = list(
+                _Request.objects.filter(
+                    employee_touch__isnull=True, admin_approve=0, denied=0
+                )
+                .exclude(email=request.session.get("current_user"))
+                .values(
+                    "id",
+                    "img",
+                    "img_type",
+                    "img_title",
+                    "denied",
+                    "img_category__name",
+                )
+            )
+
+            ext = { "jpg": "image/jpeg",
+                "jpeg": "image/jpeg",
+                "image/jpg": "image/jpeg",
+                "image/jpeg": "image/jpeg",
+                "png": "image/png",
+                "image/png": "image/png",
+                "webp": "image/webp",
+                "image/webp": "image/webp",}
+
+            for item in requests:
+                image_bytes = bytes(item["img"])
+                binary_image = b64encode(image_bytes).decode("ascii")
+                ext_type = ext[item["img_type"].lower()]
+                item["img"] = f"data:{ext_type};base64,{binary_image}"
+                item["img_category"] = item.pop("img_category__name")
             return render(request, 'artTubeApp/emp_requests.html', {'reqs': requests})
     else:
         return redirect('/login?next=/employee/')
@@ -861,7 +890,28 @@ def studio_page(request):
         _slog(LogType.USER_ACCESS_STUDIO, extra_info=[request, get_user(_email)])
         if _Request.objects.filter(email=_email).exists():
             imgs = _Request.objects.filter(email=_email)
-            img_categories = [_Category.objects.get(id=i.img_category.id).name for i in imgs]
+            imgs = list(
+                _Request.objects.filter(email=_email).values(
+                        "id", "img", "img_type", "img_title", "denied", "img_category__name",
+                    )
+            )
+
+            ext = { "jpg": "image/jpeg",
+                "jpeg": "image/jpeg",
+                "image/jpg": "image/jpeg",
+                "image/jpeg": "image/jpeg",
+                "png": "image/png",
+                "image/png": "image/png",
+                "webp": "image/webp",
+                "image/webp": "image/webp",}
+
+            for item in imgs:
+                image_bytes = bytes(item["img"])
+                binary_image = b64encode(image_bytes).decode("ascii")
+                ext_type = ext[item["img_type"].lower()]
+                item["img"] = f"data:{ext_type};base64,{binary_image}"
+                item["img_category"] = item.pop("img_category__name")
+            img_categories = []
         else:
             imgs = []
             img_categories = []

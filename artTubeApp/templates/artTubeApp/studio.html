@@ -24,9 +24,9 @@
             {% for r in requests %}
                 {% if r.denied == 0 %}
                     <div class="piece">
-                        <a href="{% url 'studio_req_view' r.id %}"><img src="data:image/*; base64,{{ r.img_b64 }}" alt="{{ r.img_title }}" style="max-width: 200px;"></a>
+                        <a href="{% url 'studio_req_view' r.id %}"><img src="{{ r.img }}" alt="{{ r.img_title }}" style="max-width: 200px;"></a>
                         <p class="studio_item_title">Title: {{ r.img_title }}</p>
-                        <p class="studio_item_title">Category: {{ r.img_category.name }}</p>
+                        <p class="studio_item_title">Category: {{ r.img_category}}</p>
                     </div>
                 {% endif %}
             {% endfor %}

@@ -26,9 +26,9 @@
                 {% for r in reqs %}
                 <tbody>
                         <td> <a href="{% url 'emp_req_view' r.id %}">{{ r.id }}</a> </td>
-                        <td> <img src="data:image/*; base64,{{ r.img_b64 }}" alt="{{ r.img_title }}" style="max-width: 100px;"> </td>
+                        <td> <img src="{{r.img}}" alt="{{ r.img_title }}" style="max-width: 100px;"> </td>
                         <td> {{ r.img_title }} </td>
-                        <td> {{ r.img_category.name }} </td>
+                        <td> {{ r.img_category }} </td>
                 </tbody>
                 {% endfor %}
             </table>
