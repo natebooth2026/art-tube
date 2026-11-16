@@ -9,52 +9,78 @@ Explore the art gallery using the secure web application
 - viewing art gallery events
 
 ## Requirements
-- Python 3.14.8 (version tested. Earlier versions work fine)
-- MySql(8.4 or later) or Mariadb(11.4 or later)
+- Docker
+- Python 3.14.8 (tested. earlier versions may work)
 
-## Setup
-1. clone the repository:\
-git clone https://github.com/natebooth2026/art-tube.git
-2. create and activate .venv
-    * (linux/mac):
+## Run with Docker
 
-            python3 -m venv .venv
-            source .venv/bin/activate
-    - (windows):
+Docker runs MariaDB and phpMyAdmin. The Django application and
+tests run locally.
 
-            py -m venv .venv
-            .venv\Scripts\Activate.ps1
-3. install dependencies:
+1. Clone the repository and enter it:
 
-        pip install -r requirements.txt
-4. connect to database:
-    - create a new database in MySql called 'secure_arttube'
-    - in art_tube/settings.py modify the following to include your username and password:
+        git clone https://github.com/natebooth2026/art-tube.git
+        cd art-tube
 
-            DATABASES = {
-                "default": {
-                    "ENGINE": "django.db.backends.mysql", 
-                    "NAME": "secure_arttube",
-                    "USER": "mydatabaseuser",
-                    "PASSWORD": "mypassword",
-                    "HOST": "127.0.0.1",
-                    "PORT": "3306",
-                }
-            }
-      
-      - import existing database sql:
-        
-                mysql -u root -p secure_arttube < C:\path\to\your\folder\full_database_backup.sql
-5. apply database migrations
+2. Update `docker-compose.yml` with your username and password. Set `MARIADB_USER`, `MARIADB_PASSWORD`, and `MARIADB_ROOT_PASSWORD`.
+   Update `.env` file in project root for Django with `DB_USER` and `DB_PWD` set
+   to the same username and password.
 
-        python manage.py makemigrations       
+3. Start MariaDB and phpMyAdmin:
+
+        docker compose up -d
+
+4. Create and activate a Python virtual environment from the repository root.
+   On Linux/macOS:
+
+        python3 -m venv .venv
+        source .venv/bin/activate
+
+   On Windows PowerShell:
+
+        py -m venv .venv
+        .venv\Scripts\Activate.ps1
+
+5. Install the backend requirements:
+
+        pip install -r src/backend/requirements.txt
+
+6. Run migrations and start Django:
+
+        cd src/backend
         python manage.py migrate
-6. start server
-
         python manage.py runserver
 
-## Usage
-open http://127.0.0.1:8000/ in browser
+7. Open the site at <http://127.0.0.1:8000/>. phpMyAdmin is at
+   <http://127.0.0.1:8080/>.
+
+## Run tests
+
+1. From the repository root, open a MariaDB shell as root:
+
+        docker compose exec db mariadb -u root -p
+
+   Enter the `MARIADB_ROOT_PASSWORD` from `docker-compose.yml`, then
+   run the SQL below. Replace `localhost` with your username
+   `MARIADB_USER`:
+
+        CREATE DATABASE IF NOT EXISTS test_secure_arttube;
+        GRANT ALL PRIVILEGES ON test_secure_arttube.* TO 'localhost'@'%';
+        EXIT;
+
+2. From `src/backend`, run tests:
+
+   Linux/macOS:
+
+        PYTHONPATH=../../tests ../../.venv/bin/python manage.py test functional security --keepdb
+
+   Windows PowerShell:
+
+        $env:PYTHONPATH = "..\..\tests"
+        python manage.py test functional security --keepdb
+
+Stop the containers with `docker compose down`. Add `-v` only if you intend to
+delete the database volume and all its data.
 
 ## Authors
 Nate Booth\
