@@ -1,0 +1,35 @@
+services:
+  db:
+    image: mariadb:13.0.2
+    container_name: arttube_db
+    restart: unless-stopped
+
+    environment:
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PWD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PWD}
+      MARIADB_DATABASE: secure_arttube
+
+    ports:             
+      - "127.0.0.1:3306:3306"
+
+    volumes:
+      - ./database:/docker-entrypoint-initdb.d:ro
+      - mariadb_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: arttube-phpmyadmin
+    restart: unless-stopped
+
+    environment:
+      HOST: db
+      PORT: 3306
+
+    ports:
+      - "127.0.0.1:8080:80"
+
+    depends_on:
+      - db
+volumes:
+  mariadb_data:
