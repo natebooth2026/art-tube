@@ -19,41 +19,14 @@
         </div>
         {% include 'artTubeApp/navbar.html' %}
         <hr>
-        <p class="text-center" style="font-family: Workbench, sans-serif; font-size: 2rem;">Welcome to the Gallery! </br>
-            {% for c in categories %}
-                <a href="{% url 'gallery_room' id=c.id %}" class="text-decoration-none"> <button type="button" class="btn btn-primary">{{c.name}} Room</button> </a>
-            {% endfor %}
-        </p>
+        <p class="text-center" style="font-family: Workbench, sans-serif; font-size: 2rem;">Welcome!</p>
         <div class="container d-flex justify-content-center align-items-center" style="width: 200px; font-family: Workbench, sans-serif;">
             <form method="post" style="display:inline;">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-primary">Exit Gallery</button>
+                <button type="submit" class="btn btn-primary">Exit Room</button>
             </form>
         </div>
         <p class="text-center" style="font-family: Workbench, sans-serif; font-size: 1rem;">Current Occupancy:  {{occupancy}}/100</p>
-
-        <!-- carousel -->
-            <div id="carouselExampleAutoplaying" class="carousel slide" data-bs-ride="carousel">
-                <div class="carousel-inner w-75 mx-auto">
-                    <div class="carousel-item active bg-body-secondary">
-                        <img src="https://images.freecreatives.com/wp-content/uploads/2015/03/Street-Modern-painting.jpg" class="object-fit-cover border rounded d-block w-100 h-50" alt="...">
-                    </div>
-                    <div class="carousel-item bg-body-secondary">
-                        <img src="https://wallpapers.com/images/hd/traditional-japanese-art-4mgc1cwo3hl8hdbo.jpg" class="object-fit-cover border rounded d-block w-100 h-50" alt="...">
-                    </div>
-                    <div class="carousel-item bg-body-secondary">
-                        <img src="https://i.pinimg.com/originals/65/4d/10/654d10cd803dcdc4469f6fccd236b8c9.jpg" class="object-fit-contain border rounded d-block w-100 h-50" alt="...">
-                    </div>
-                </div>
-                <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleAutoplaying" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleAutoplaying" data-bs-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-            </div>
 
         <!-- grid -->
         <div class="container text-center">
@@ -62,7 +35,7 @@
                 {% for s in submissions %}
                     <div class="col-3">
                         <div class="card" style="width: 15rem; height: 20rem;">
-                            <img src="{{ s.img }}" class="card-img-top" alt="Image unavailable" style="padding: 0.5em; border: 0.25rem solid rgb(113, 84, 50); width: 15rem; height: 12rem; object-fit: contain; background-color: rgb(241, 240, 240);">
+                            <img src="data:image/*; base64,{{ s.img_b64 }}" alt="{{ s.img_title }}" style="padding: 0.5em; border: 0.25rem solid rgb(113, 84, 50); width: 15rem; height: 12rem; object-fit: contain; background-color: rgb(241, 240, 240);">
                             
                             <div class="card-body">
                                 <p class="card-text">

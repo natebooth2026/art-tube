@@ -899,7 +899,7 @@ def denied_reqs(request):
         return redirect('/login?next=/canvas/denied_requests')
 
 def gallery(request):
-    request.session['in_gallery'] = False
+    request.session['in_gallery'] = False #DEBUG? May need moved
     if request.method == 'GET':
         occupancy = _Occupancy.objects.filter(category_id=None).count()
         if occupancy > 100:
@@ -916,19 +916,9 @@ def gallery(request):
             return redirect(f'/gallery/room/{request.session.get('room_id')}')
 
         categories = _Category.objects.all()
-        submissions = list(_Submissions.objects.values(
-                    "img",
-                    "img_type",
-                    "img_title",
-                    "img_desc",
-                ))
+        submissions = _Submissions.objects.all()
         
         #convert LONGBLOB to image
-        for submission in submissions:
-            binary_image = b64encode(submission["img"]).decode("ascii")
-            submission["img"] = (
-                f"data:{submission['img_type']};base64,{binary_image}"
-            )
         user = None
         email = request.session.get('current_user')
         if email:
@@ -1014,11 +1004,6 @@ def gallery_room(request, id = -1):
             return redirect('gallery')
         
         submissions = _Submissions.objects.filter(approved_category=id)
-        for submission in submissions:
-                binary_image = b64encode(submission.img).decode("ascii")
-                submission.img = (
-                    f"data:{submission.img_type};base64,{binary_image}"
-                )
         #update occupancy
         occupancy = _Occupancy.objects.filter(category_id=id).count()
         return render(request, 'artTubeApp/room.html', {'cat_name': True, 'submissions': submissions, 'occupancy': occupancy})
