@@ -224,7 +224,7 @@ class Submissions(models.Model):
 
     def img_b64(self):
         if self.img:
-            return b64encode(bytes(self.img)).decode('utf-8')
+            return b64encode(bytes(fernet.decrypt(self.img))).decode('utf-8')
         return None
 
 
