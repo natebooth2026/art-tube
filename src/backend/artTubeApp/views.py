@@ -184,12 +184,9 @@ def signup(request):
                 username = form.cleaned_data.get('username')
                 pwd = make_password(form.cleaned_data.get('pwd'))
 
-                if _User.objects.filter(username=username).exists():
+                if _User.objects.filter(email=email).exists() or _User.objects.filter(username=username).exists():
                     _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
-                    form.add_error('username', 'Username has been taken.')
-                if _User.objects.filter(email=email).exists():
-                    _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
-                    form.add_error('email', 'Failed to create account')
+                    form.add_error('email', 'Failed to create account. Invalid email/username')
                 else:
                     _User.objects.create(
                         username=username,
