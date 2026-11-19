@@ -1,8 +1,15 @@
 from django.test import Client, TestCase
 from django.urls import reverse
-from artTubeApp.models import Category, User, Employee, Admin, Events, Request
+from importlib import import_module
 import datetime
 from unittest.mock import patch
+_models = import_module("artTubeApp.models")
+Category = _models.Category
+User = _models.User
+Employee = _models.Employee
+Admin = _models.Admin
+Events = _models.Events
+Request = _models.Request
 
 
 class ViewTests(TestCase):

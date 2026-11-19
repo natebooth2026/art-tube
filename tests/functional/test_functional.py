@@ -3,10 +3,19 @@ from io import BytesIO
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
-from artTubeApp.forms import add_event, account_creation, account_validate, sub_request_form
+from importlib import import_module
+_forms = import_module("artTubeApp.forms")
+add_event = _forms.add_event
+account_creation = _forms.account_creation
+account_validate = _forms.account_validate
+sub_request_form = _forms.sub_request_form
 from django.contrib.auth.hashers import check_password
 from django.urls import reverse
-from artTubeApp.models import Category, User, Employee, Events
+_models = import_module("artTubeApp.models")
+Category = _models.Category
+User = _models.User
+Employee = _models.Employee
+Events = _models.Events
 
 
 class FormTests(TestCase):
