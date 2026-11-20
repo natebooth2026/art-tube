@@ -175,18 +175,21 @@ def login(request):
         return redirect('gallery')
 
 def logout(request):
-    if request.session.get('current_user') and _User.objects.filter(email=request.session.get('current_user')):
-        revoke_validations(request)
-        _slog(LogType.ACCOUNT_LOGOUT, extra_info=[request, get_user(request.session.get('current_user'))])
-        del request.session['current_user']
-        return render(request, 'artTubeApp/logout.html')
-    elif not _User.objects.filter(email=request.session.get('current_user')):
-        revoke_validations(request)
-        _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request, request.session.get('current_user')])
-        del request.session['current_user']
-        return render(request, 'artTubeApp/logout.html')
+    if can_enter(request):
+        if request.session.get('current_user') and _User.objects.filter(email=request.session.get('current_user')):
+            revoke_validations(request)
+            _slog(LogType.ACCOUNT_LOGOUT, extra_info=[request, get_user(request.session.get('current_user'))])
+            del request.session['current_user']
+            return render(request, 'artTubeApp/logout.html')
+        elif not _User.objects.filter(email=request.session.get('current_user')):
+            revoke_validations(request)
+            _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request, request.session.get('current_user')])
+            del request.session['current_user']
+            return render(request, 'artTubeApp/logout.html')
+        else:
+            return redirect('home')
     else:
-        return redirect('home')
+        return redirect('gallery')
 
 def signup(request):
     if can_enter(request):
