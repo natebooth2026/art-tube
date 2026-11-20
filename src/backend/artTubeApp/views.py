@@ -221,15 +221,18 @@ def signup(request):
 def emp_dashboard(request):
     if request.session.get('current_user'):
         revoke_validations(request)
-        email = request.session.get('current_user')
-        is_emp = False
-        if _Employee.objects.filter(email=email).exists():
-            if _Employee.objects.get(email=email).deactivated == 0:
-                is_emp = True
-            _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(email), _Employee.objects.get(email=email).employee_id, "Employee Dashboard"])
-        else:
-            _slog(LogType.USER_ATTEMPT_EMP_DASHBOARD, extra_info=[request, get_user(email)])
-        return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
+        if can_enter(request):
+            email = request.session.get('current_user')
+            is_emp = False
+            if _Employee.objects.filter(email=email).exists():
+                if _Employee.objects.get(email=email).deactivated == 0:
+                    is_emp = True
+                _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(email), _Employee.objects.get(email=email).employee_id, "Employee Dashboard"])
+            else:
+                _slog(LogType.USER_ATTEMPT_EMP_DASHBOARD, extra_info=[request, get_user(email)])
+            return render(request, 'artTubeApp/emp_dash.html', {'is_emp': is_emp})
+        else: # unauthorized access
+            return redirect('gallery')
     else:
         return redirect('/login?next=/employee/')
 
@@ -237,7 +240,7 @@ def emp_events(request):
     if request.session.get('current_user'):
         if not request.session.get('validate_events'):
             return redirect('/validate?next=/employee/events')
-        else:
+        elif can_enter(request):
             _email = request.session.get('current_user')
             form = add_event()
             v_form = account_validate()
@@ -309,6 +312,8 @@ def emp_events(request):
                 #redirect to home page
                 request.session['validate_events'] = False
                 return redirect('/')
+        else: # unauth access
+            return redirect('gallery')
     else:
         return redirect('/login?next=/employee/')
 
@@ -316,7 +321,7 @@ def emp_requests_landing(request):
     if request.session.get('current_user'):
         if not request.session.get('validate_requests'):
             return redirect('/validate?next=/employee/requests')
-        else:
+        elif can_enter(request):
             if not _Admin.objects.filter(email=request.session.get('current_user')).exists():
                 _slog(LogType.EMPLOYEE_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, "requests"])
             else:
@@ -324,6 +329,8 @@ def emp_requests_landing(request):
             remove_emp_touch(request)
             requests = _Request.objects.filter(employee_touch__isnull=True, admin_approve=0, denied=0).exclude(email=request.session.get('current_user'))
             return render(request, 'artTubeApp/emp_requests.html', {'reqs': requests})
+        else: # unauth access
+            return redirect('gallery')
     else:
         return redirect('/login?next=/employee/')
 
@@ -331,7 +338,7 @@ def emp_request_view(request, id = -1):
     if request.session.get('current_user'):
         if not request.session.get('validate_requests'):
             return redirect('/validate?next=/employee/requests')
-        else:
+        elif can_enter(request):
             if id < 0 or not _Request.objects.filter(id=id).exists():
                 if not _Admin.objects.filter(email=request.session.get('current_user')).exists():
                     _slog(LogType.EMPLOYEE_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Employee.objects.get(email=request.session.get('current_user')).employee_id, f"request #{id} view"])
@@ -438,22 +445,27 @@ def emp_request_view(request, id = -1):
                 else:
                     _slog(LogType.ADMIN_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(request.session.get('current_user')).admin_id, f"request #{id} view"])
                 return redirect('/employee/requests')
+        else: # unauth access
+            return redirect('gallery')
     else:
         return redirect('/login?next=/employee/')
 
 def admin_dashboard(request):
     if request.session.get('current_user'):
         revoke_validations(request)
-        email = request.session.get('current_user')
-        is_admin = False
-        if _Admin.objects.filter(email=email):
-            is_admin = True
-            _slog(LogType.ADMIN_ACCESS, extra_info=[request, get_user(email), _Admin.objects.get(email=email).admin_id, "Admin Portal"])
-        elif _Employee.objects.filter(email=email):
-            _slog(LogType.EMPLOYEE_ATTEMPT_ADMIN_PORTAL, extra_info=[request, get_user(email), _Employee.objects.get(email=email).employee_id])
-        else:
-            _slog(LogType.USER_ATTEMPT_ADMIN_PORTAL, extra_info=[request, get_user(email)])
-        return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
+        if can_enter(request):
+            email = request.session.get('current_user')
+            is_admin = False
+            if _Admin.objects.filter(email=email):
+                is_admin = True
+                _slog(LogType.ADMIN_ACCESS, extra_info=[request, get_user(email), _Admin.objects.get(email=email).admin_id, "Admin Portal"])
+            elif _Employee.objects.filter(email=email):
+                _slog(LogType.EMPLOYEE_ATTEMPT_ADMIN_PORTAL, extra_info=[request, get_user(email), _Employee.objects.get(email=email).employee_id])
+            else:
+                _slog(LogType.USER_ATTEMPT_ADMIN_PORTAL, extra_info=[request, get_user(email)])
+            return render(request, 'artTubeApp/admin_dash.html', {'is_admin': is_admin})
+        else: # unauth access
+            return redirect('gallery')
     else:
         return redirect('/login?next=/admin/')
 
@@ -461,11 +473,13 @@ def admin_submissions_landing(request):
     if request.session.get('current_user'):
         if not request.session.get('validate_reports'):
             return redirect('/validate?next=/admin/submissions')
-        else:
+        elif can_enter(request):
             _slog(LogType.ADMIN_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, "submissions"])
             remove_emp_touch(request)
             submissions = _Submissions.objects.all().exclude(email=request.session.get('current_user'), approval_emp_id=_Employee.objects.get(email=request.session.get('current_user')).employee_id).order_by('admin_review')
             return render(request, 'artTubeApp/admin_submissions.html', {'subs': submissions})
+        else: # unauth access
+            return redirect('gallery')
     else:
         return redirect('/login?next=/admin/')
 
@@ -473,7 +487,7 @@ def admin_submission_view(request, id = -1):
     if request.session.get('current_user'):
         if not request.session.get('validate_reports'):
             return redirect('/validate?next=/admin/submissions')
-        else:
+        elif can_enter(request):
             if id < 0 or not _Submissions.objects.filter(id=id).exists():
                 _slog(LogType.ADMIN_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, f"submission #{id} view"])
                 return redirect('/admin/submissions')
@@ -557,6 +571,8 @@ def admin_submission_view(request, id = -1):
             else:
                 _slog(LogType.ADMIN_FAILED_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(request.session.get('current_user')).admin_id, f"submission #{id} view"])
                 return redirect('/admin/submissions')
+        else: # unauth access
+            return redirect('gallery')
     else:
         return redirect('/login?next=/admin/')
 
@@ -564,7 +580,7 @@ def admin_switch_roles(request):
     if request.session.get('current_user'):
         if not request.session.get('validate_roles'):
             return redirect('/validate?next=/admin/switch_role')
-        else:
+        elif can_enter(request):
             if request.method == 'GET':
                 _slog(LogType.ADMIN_ACCESS, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, "roles"])
                 form1 = switch_role()
@@ -656,6 +672,8 @@ def admin_switch_roles(request):
                                 elif (not _m_is_emp or _m_is_emp.deactivated == 1) and _role == "fire": #invalid
                                     form1.add_error('role', 'Invalid role switch. Can\'t demote user/inactive employee')
                                     _slog(LogType.ADMIN_FAILED_SWITCHING_ROLE, extra_info=[request, get_user(request.session.get('current_user')), _Admin.objects.get(email=request.session.get('current_user')).admin_id, _m_email, "User", "User"])
+        else:
+            return redirect('gallery')        
         return render(request, 'artTubeApp/admin_role_switch.html', {'r_form': form1, 'v_form': form2})        
     else:       
         return redirect('/login?next/admin/')
