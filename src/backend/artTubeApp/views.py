@@ -944,7 +944,7 @@ def gallery(request):
         if occupancy > 100:
             return redirect('home')
         revoke_validations(request)
-        if not request.session['in_gallery']:
+        if not request.session.get('in_gallery'):
             request.session['in_gallery'] = True
             if not request.session.get('current_user'):
                 _slog(LogType.USER_ENTER_GALLERY, extra_info=[request, None])
