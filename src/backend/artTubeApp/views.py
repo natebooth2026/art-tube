@@ -200,7 +200,7 @@ def signup(request):
                 if _User.objects.filter(email=email).exists():
                     _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
                     form.add_error('email', 'Email already registered.')
-                else:
+                if not form.errors:
                     _User.objects.create(
                         username=username,
                         email=email,
