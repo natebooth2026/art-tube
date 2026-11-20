@@ -201,26 +201,20 @@ def signup(request):
                     username = form.cleaned_data.get('username')
                     pwd = make_password(form.cleaned_data.get('pwd'))
 
-                    if _User.objects.filter(username=username).exists():
-                        _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
-                        form.add_error('username', 'Username has been taken.')
-                    if _User.objects.filter(email=email).exists():
-                        _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
-                        form.add_error('email', 'Email already registered.')
-                    if not form.errors:
-                        _User.objects.create(
-                            username=username,
-                            email=email,
-                            password=pwd,
-                            admin_approve=0,
-                            locked=0,
-                            number_2fa=0
-                        )
-                        _slog(LogType.ACCOUNT_CREATE, extra_info=[request, get_user(email)])
-                        return redirect('login')
-            else:
-                form = account_creation()
-            return render(request, 'artTubeApp/signup.html', {'form': form})
+                if _User.objects.filter(email=email).exists() or _User.objects.filter(username=username).exists():
+                    _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
+                    form.add_error('email', 'Failed to create account. Invalid email/username')
+                if not form.errors:
+                    _User.objects.create(
+                        username=username,
+                        email=email,
+                        password=pwd,
+                        admin_approve=0,
+                        locked=0,
+                        number_2fa=0
+                    )
+                    _slog(LogType.ACCOUNT_CREATE, extra_info=[request, get_user(email)])
+                    return redirect('login')
         else:
             revoke_validations(request)
             return redirect('home')
