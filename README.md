@@ -41,7 +41,7 @@ tests run locally.
         py -m venv .venv
         .venv\Scripts\Activate.ps1
 
-5. Install the backend requirements:
+5. Install the backend requirements: On Linux/macOS, first install the `libmagic`. `sudo apt install libmagic1` on Debian/Ubuntu or `brew install libmagic` on macOS.
 
         pip install -r src/backend/requirements.txt
 
@@ -49,10 +49,9 @@ tests run locally.
 
         cd src/backend
         python manage.py migrate
-        python manage.py runserver
+        python manage.py runserver_plus --cert-file cert.crt
 
-7. Open the site at <http://127.0.0.1:8000/>. phpMyAdmin is at
-   <http://127.0.0.1:8080/>.
+7. Open the site at <https://127.0.0.1:8000/>.
 
 ## Run tests
 
