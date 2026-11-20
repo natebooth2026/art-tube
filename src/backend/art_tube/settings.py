@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 import os #for file encryption
+import sys #to grab testing arg
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -22,16 +23,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# Secret key, MUST BE CHANGED!!!!
-SECRET_KEY = os.getenv('FILE_CRYPT_KEY')
+# Secret key
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # File encryption key 
 FILE_CRYPT_KEY = os.getenv('FILE_CRYPT_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if not 'test' in sys.argv:
+    print("DEBUG disabled!")
+    DEBUG = False
+elif 'test' in sys.argv:
+    print("DEBUG enabled!")
+    DEBUG = True
+else:
+    assert False, "Suspicious behavior detected. Try again."
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -43,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions', # for HTTPS testing
     "rest_framework",
     "artTubeApp"
 ]
