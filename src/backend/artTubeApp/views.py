@@ -187,7 +187,7 @@ def signup(request):
                 if _User.objects.filter(email=email).exists() or _User.objects.filter(username=username).exists():
                     _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
                     form.add_error('email', 'Failed to create account. Invalid email/username')
-                else:
+                if not form.errors:
                     _User.objects.create(
                         username=username,
                         email=email,
