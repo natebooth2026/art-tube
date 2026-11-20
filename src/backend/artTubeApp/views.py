@@ -49,41 +49,74 @@ def landing(request):
     return render(request, 'artTubeApp/index.html')
 
 def login(request):
-    if not request.session.get('current_user'):
-        if request.method == 'GET':
-            form = account_validate()
-            form2 = account_validate_emailMFA()
-            form3 = account_validate_questionsMFA()
-        elif request.method == 'POST':
-            request.session.cycle_key()
-            form = account_validate(request.POST)
-            form2 = account_validate_emailMFA(request.POST)
-            form3 = account_validate_questionsMFA(request.POST)
-            if form.is_valid():
-                _email = form.cleaned_data.get('email')
-                _password = form.cleaned_data.get('pwd')
+    if can_enter(request):
+        if not request.session.get('current_user'):
+            if request.method == 'GET':
+                form = account_validate()
+                form2 = account_validate_emailMFA()
+                form3 = account_validate_questionsMFA()
+            elif request.method == 'POST':
+                request.session.cycle_key()
+                form = account_validate(request.POST)
+                form2 = account_validate_emailMFA(request.POST)
+                form3 = account_validate_questionsMFA(request.POST)
+                if form.is_valid():
+                    _email = form.cleaned_data.get('email')
+                    _password = form.cleaned_data.get('pwd')
 
-                if _User.objects.filter(email=_email).exists():
-                    users = _User.objects.get(email=_email)
-                else:
-                    users = None
+                    if _User.objects.filter(email=_email).exists():
+                        users = _User.objects.get(email=_email)
+                    else:
+                        users = None
 
-                if not users:
-                    form.add_error('email', 'Email is not associated with an account. Please create a new account or try another email.')
-                    _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request, _email])
-                elif check_password(_password, users.password):
+                    if not users:
+                        form.add_error('email', 'Email is not associated with an account. Please create a new account or try another email.')
+                        _slog(LogType.ACCOUNT_FAILED_LOGIN_TO_UNEXISTANT, extra_info=[request, _email])
+                    elif check_password(_password, users.password):
+                        next_page = request.POST.get('next') or request.GET.get('next')
+                        #validate next
+                        if not url_has_allowed_host_and_scheme(next_page, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+                            next_page = "/"
+                        if users.number_2fa == 0:
+                            request.session['current_user'] = users.email
+                            _slog(LogType.ACCOUNT_LOGIN, extra_info=[request, users])
+                            return redirect(next_page)
+                        else:
+                            request.session['attempt_user_obj'] = users.email
+                            form2 = account_validate_emailMFA()
+                            email = users.email
+                            code = f"{secrets.randbelow(1_000_000):06d}"
+                            request.session["employee_code"] = code
+                            #send email with code
+                            send_mail(
+                                "ArtTube Verification code",
+                                f"code is {code}",
+                                settings.EMAIL_HOST_USER,  # Uses DEFAULT_FROM_EMAIL if configured
+                                [email],
+                                fail_silently=False,
+                            )
+                            return render(request, 'artTubeApp/login.html', {'form': form2, 'email_code': True})
+                    else:
+                        form.add_error('email', 'Email/password not found. Try again.')
+                        _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, users])
+                elif form2.is_valid():
                     next_page = request.POST.get('next') or request.GET.get('next')
                     #validate next
                     if not url_has_allowed_host_and_scheme(next_page, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
                         next_page = "/"
-                    if users.number_2fa == 0:
-                        request.session['current_user'] = users.email
-                        _slog(LogType.ACCOUNT_LOGIN, extra_info=[request, users])
-                        return redirect(next_page)
+                    _code = form2.cleaned_data.get('email_code')
+                    if _code == request.session.get('employee_code'):
+                        if get_user(request.session.get('attempt_user_obj')).secure_q1 is not None:
+                            form3 = account_validate_questionsMFA()
+                            return render(request, 'artTubeApp/login.html', {'form': form3, 'secure_q': True, 'q1': get_user(request.session.get('attempt_user_obj')).secure_q1, 'q2': get_user(request.session.get('attempt_user_obj')).secure_q2})
+                        else:
+                            request.session['current_user'] = request.session['attempt_user_obj']
+                            del request.session['attempt_user_obj']
+                            _slog(LogType.ACCOUNT_LOGIN, extra_info=[request, get_user(request.session['current_user'])])
+                            return redirect(next_page)
                     else:
-                        request.session['attempt_user_obj'] = users.email
                         form2 = account_validate_emailMFA()
-                        email = users.email
+                        email = request.session.get('attempt_user_obj')
                         code = f"{secrets.randbelow(1_000_000):06d}"
                         request.session["employee_code"] = code
                         #send email with code
@@ -94,26 +127,26 @@ def login(request):
                             [email],
                             fail_silently=False,
                         )
-                        return render(request, 'artTubeApp/login.html', {'form': form2, 'email_code': True})
-                else:
-                    form.add_error('email', 'Email/password not found. Try again.')
-                    _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, users])
-            elif form2.is_valid():
-                next_page = request.POST.get('next') or request.GET.get('next')
-                 #validate next
-                if not url_has_allowed_host_and_scheme(next_page, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
-                    next_page = "/"
-                _code = form2.cleaned_data.get('email_code')
-                if _code == request.session.get('employee_code'):
-                    if get_user(request.session.get('attempt_user_obj')).secure_q1 is not None:
-                        form3 = account_validate_questionsMFA()
-                        return render(request, 'artTubeApp/login.html', {'form': form3, 'secure_q': True, 'q1': get_user(request.session.get('attempt_user_obj')).secure_q1, 'q2': get_user(request.session.get('attempt_user_obj')).secure_q2})
+                        _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, get_user(request.session.get('attempt_user_obj'))])
+                        return render(request, 'artTubeApp/login.html', {'form': form2,'email_code': True, 'err': True, 'error_msg': 'Code is incorrect. We sent another, try again.'})
+                elif form3.is_valid():
+                    next_page = request.POST.get('next') or request.GET.get('next')
+                    #validate next
+                    if not url_has_allowed_host_and_scheme(next_page, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+                        next_page = "/"
+                    _a1 = form3.cleaned_data.get('q_answer1')
+                    _a2 = form3.cleaned_data.get('q_answer2')
+                    if not check_password(_a1, get_user(request.session.get('attempt_user_obj')).secure_a1) or not check_password(_a2, get_user(request.session.get('attempt_user_obj')).secure_a2):
+                        form3.add_error('q_answer1', 'One or more incorrect answers. Try again.')
+                        _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, get_user(request.session.get('attempt_user_obj'))])
+                        return render(request, 'artTubeApp/login.html', {'form': 'form3', 'secure_q': True, 'q1': get_user(request.session.get('attempt_user_obj')).secure_q1, 'q2': get_user(request.session.get('attempt_user_obj')).secure_q2})
                     else:
                         request.session['current_user'] = request.session['attempt_user_obj']
                         del request.session['attempt_user_obj']
                         _slog(LogType.ACCOUNT_LOGIN, extra_info=[request, get_user(request.session['current_user'])])
                         return redirect(next_page)
-                else:
+                elif not form.is_valid() and not form2.is_valid():
+                    next_page = request.POST.get('next') or request.GET.get('next') or '/'
                     form2 = account_validate_emailMFA()
                     email = request.session.get('attempt_user_obj')
                     code = f"{secrets.randbelow(1_000_000):06d}"
@@ -127,49 +160,19 @@ def login(request):
                         fail_silently=False,
                     )
                     _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, get_user(request.session.get('attempt_user_obj'))])
-                    return render(request, 'artTubeApp/login.html', {'form': form2,'email_code': True, 'err': True, 'error_msg': 'Code is incorrect. We sent another, try again.'})
-            elif form3.is_valid():
-                next_page = request.POST.get('next') or request.GET.get('next')
-                #validate next
-                if not url_has_allowed_host_and_scheme(next_page, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
-                    next_page = "/"
-                _a1 = form3.cleaned_data.get('q_answer1')
-                _a2 = form3.cleaned_data.get('q_answer2')
-                if not check_password(_a1, get_user(request.session.get('attempt_user_obj')).secure_a1) or not check_password(_a2, get_user(request.session.get('attempt_user_obj')).secure_a2):
-                    form3.add_error('q_answer1', 'One or more incorrect answers. Try again.')
+                    return render(request, 'artTubeApp/login.html', {'form': form2, 'email_code': True, 'resent': True})
+                elif not form.is_valid() and not form3.is_valid():
+                    next_page = request.POST.get('next') or request.GET.get('next') or '/'
+                    form3 = account_validate_questionsMFA()
+                    form3.add_error('q_answer1', 'Bad attempt. Try again.')
                     _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, get_user(request.session.get('attempt_user_obj'))])
-                    return render(request, 'artTubeApp/login.html', {'form': 'form3', 'secure_q': True, 'q1': get_user(request.session.get('attempt_user_obj')).secure_q1, 'q2': get_user(request.session.get('attempt_user_obj')).secure_q2})
-                else:
-                    request.session['current_user'] = request.session['attempt_user_obj']
-                    del request.session['attempt_user_obj']
-                    _slog(LogType.ACCOUNT_LOGIN, extra_info=[request, get_user(request.session['current_user'])])
-                    return redirect(next_page)
-            elif not form.is_valid() and not form2.is_valid():
-                next_page = request.POST.get('next') or request.GET.get('next') or '/'
-                form2 = account_validate_emailMFA()
-                email = request.session.get('attempt_user_obj')
-                code = f"{secrets.randbelow(1_000_000):06d}"
-                request.session["employee_code"] = code
-                #send email with code
-                send_mail(
-                    "ArtTube Verification code",
-                    f"code is {code}",
-                    settings.EMAIL_HOST_USER,  # Uses DEFAULT_FROM_EMAIL if configured
-                    [email],
-                    fail_silently=False,
-                )
-                _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, get_user(request.session.get('attempt_user_obj'))])
-                return render(request, 'artTubeApp/login.html', {'form': form2, 'email_code': True, 'resent': True})
-            elif not form.is_valid() and not form3.is_valid():
-                next_page = request.POST.get('next') or request.GET.get('next') or '/'
-                form3 = account_validate_questionsMFA()
-                form3.add_error('q_answer1', 'Bad attempt. Try again.')
-                _slog(LogType.ACCOUNT_FAILED_LOGIN, extra_info=[request, get_user(request.session.get('attempt_user_obj'))])
-                return render(request, 'artTubeApp/login.html', {'form': form3, 'secure_q': True, 'q1': get_user(request.session.get('attempt_user_obj')).secure_q1, 'q2': get_user(request.session.get('attempt_user_obj')).secure_q2})
+                    return render(request, 'artTubeApp/login.html', {'form': form3, 'secure_q': True, 'q1': get_user(request.session.get('attempt_user_obj')).secure_q1, 'q2': get_user(request.session.get('attempt_user_obj')).secure_q2})
 
-        return render(request, 'artTubeApp/login.html', {'form': form})
+            return render(request, 'artTubeApp/login.html', {'form': form})
+        else:
+            return redirect('home')
     else:
-        return redirect('home')
+        return redirect('gallery')
 
 def logout(request):
     if request.session.get('current_user') and _User.objects.filter(email=request.session.get('current_user')):
@@ -186,37 +189,40 @@ def logout(request):
         return redirect('home')
 
 def signup(request):
-    if not request.session.get('current_user'):
-        if request.method == "POST":
-            form = account_creation(request.POST)
-            if form.is_valid():
-                email = form.cleaned_data.get('email')
-                username = form.cleaned_data.get('username')
-                pwd = make_password(form.cleaned_data.get('pwd'))
+    if can_enter(request):
+        if not request.session.get('current_user'):
+            if request.method == "POST":
+                form = account_creation(request.POST)
+                if form.is_valid():
+                    email = form.cleaned_data.get('email')
+                    username = form.cleaned_data.get('username')
+                    pwd = make_password(form.cleaned_data.get('pwd'))
 
-                if _User.objects.filter(username=username).exists():
-                    _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
-                    form.add_error('username', 'Username has been taken.')
-                if _User.objects.filter(email=email).exists():
-                    _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
-                    form.add_error('email', 'Email already registered.')
-                if not form.errors:
-                    _User.objects.create(
-                        username=username,
-                        email=email,
-                        password=pwd,
-                        admin_approve=0,
-                        locked=0,
-                        number_2fa=0
-                    )
-                    _slog(LogType.ACCOUNT_CREATE, extra_info=[request, get_user(email)])
-                    return redirect('login')
+                    if _User.objects.filter(username=username).exists():
+                        _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
+                        form.add_error('username', 'Username has been taken.')
+                    if _User.objects.filter(email=email).exists():
+                        _slog(LogType.ACCOUNT_FAILED_CREATE, extra_info=[request, email])
+                        form.add_error('email', 'Email already registered.')
+                    if not form.errors:
+                        _User.objects.create(
+                            username=username,
+                            email=email,
+                            password=pwd,
+                            admin_approve=0,
+                            locked=0,
+                            number_2fa=0
+                        )
+                        _slog(LogType.ACCOUNT_CREATE, extra_info=[request, get_user(email)])
+                        return redirect('login')
+            else:
+                form = account_creation()
+            return render(request, 'artTubeApp/signup.html', {'form': form})
         else:
-            form = account_creation()
-        return render(request, 'artTubeApp/signup.html', {'form': form})
+            revoke_validations(request)
+            return redirect('home')
     else:
-        revoke_validations(request)
-        return redirect('home')
+        return redirect('gallery')
 
 def emp_dashboard(request):
     if request.session.get('current_user'):
