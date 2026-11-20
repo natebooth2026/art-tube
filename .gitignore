@@ -220,3 +220,6 @@ __marimo__/
 # Django migrations are source files and should be committed.
 art_tube/settings copy.py
 docker-compose copy.yml
+
+# HTTPS testing
+cert.*
