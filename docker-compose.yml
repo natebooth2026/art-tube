@@ -18,19 +18,5 @@ services:
       - ./database:/docker-entrypoint-initdb.d:ro
       - mariadb_data:/var/lib/mysql
 
-  phpmyadmin:
-    image: phpmyadmin:latest
-    container_name: arttube-phpmyadmin
-    restart: unless-stopped
-
-    environment:
-      HOST: db
-      PORT: 3306
-
-    ports:
-      - "127.0.0.1:8080:80"
-
-    depends_on:
-      - db
 volumes:
   mariadb_data:
