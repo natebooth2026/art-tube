@@ -7,6 +7,7 @@ services:
     environment:
       MARIADB_USER: ${DB_USER}
       MARIADB_PASSWORD: ${DB_PWD}
+      MARIADB_ROOT_HOST: localhost
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PWD}
       MARIADB_DATABASE: secure_arttube
 
