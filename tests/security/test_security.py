@@ -63,7 +63,10 @@ class ViewTests(TestCase):
             "confirm_pwd": "testing456",
         }
         response = self.client.post(reverse("signup"), duplicate_user_data)
-        self.assertIn("Username has been taken.", response.context["form"].errors["username"])
+        self.assertIn(
+            "Failed to create account. Invalid email/username",
+            response.context["form"].errors["email"],
+        )
         user_count = User.objects.filter(
             username=self.user_data["username"],
         ).count()
