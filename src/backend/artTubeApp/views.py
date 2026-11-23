@@ -1078,112 +1078,121 @@ def events(request):
         return redirect('gallery')
 
 def enable_mfa(request):
-    if request.session.get('current_user'):
-        form1 = account_validate_emailMFA()
-        form2 = account_validate_questionsSetup()
-        if request.method == 'GET':
-            _user = get_user(request.session.get('current_user'))
-            if _user.number_2fa == 1 and _user.secure_q1 != None:
-                return redirect('home')
-            elif _user.number_2fa == 1 and _user.secure_q1 == None:
-                is_admin = False
-                if _Admin.objects.filter(email=_user).exists():
-                    is_admin = True
-                return render(request, "artTubeApp/enable_mfa.html", {'form2': form2, 'admin_require': is_admin})
-            email = request.session.get('current_user')
-            code = f"{secrets.randbelow(1_000_000):06d}"
-            request.session["employee_code"] = code
-            #send email with code
-            send_mail(
-                "ArtTube Verification code",
-                f"code is {code}",
-                settings.EMAIL_HOST_USER,  # Uses DEFAULT_FROM_EMAIL if configured
-                [email],
-                fail_silently=False,
-            )
-            return render(request, "artTubeApp/enable_mfa.html", {'form1': form1})
-        elif request.method == 'POST':
-            if request.POST.get("action") == "submit-code":
-                form = account_validate_emailMFA(request.POST)
-                if form.is_valid():
-                    email_code = form.cleaned_data.get('email_code')
-                    code = request.session.get("employee_code")
-                    #compare with code that was sent
-                    if email_code == code:
-                        user = get_user(request.session.get('current_user'))
-                        user.number_2fa = 1
-                        user.save()
-                        is_admin = False
-                        if _Admin.objects.filter(email=user).exists():
-                            is_admin = True
-                        _slog(LogType.USER_ENABLED_MFA, extra_info=[request, user])
-                        return render(request, "artTubeApp/enable_mfa.html", {'form2': form2, 'admin_require': is_admin})
+    if can_enter(request):
+        if request.session.get('current_user'):
+            form1 = account_validate_emailMFA()
+            form2 = account_validate_questionsSetup()
+            if request.method == 'GET':
+                _user = get_user(request.session.get('current_user'))
+                if _user.number_2fa == 1 and _user.secure_q1 != None:
+                    return redirect('home')
+                elif _user.number_2fa == 1 and _user.secure_q1 == None:
+                    is_admin = False
+                    if _Admin.objects.filter(email=_user).exists():
+                        is_admin = True
+                    return render(request, "artTubeApp/enable_mfa.html", {'form2': form2, 'admin_require': is_admin})
+                email = request.session.get('current_user')
+                code = f"{secrets.randbelow(1_000_000):06d}"
+                request.session["employee_code"] = code
+                #send email with code
+                send_mail(
+                    "ArtTube Verification code",
+                    f"code is {code}",
+                    settings.EMAIL_HOST_USER,  # Uses DEFAULT_FROM_EMAIL if configured
+                    [email],
+                    fail_silently=False,
+                )
+                return render(request, "artTubeApp/enable_mfa.html", {'form1': form1})
+            elif request.method == 'POST':
+                if request.POST.get("action") == "submit-code":
+                    form = account_validate_emailMFA(request.POST)
+                    if form.is_valid():
+                        email_code = form.cleaned_data.get('email_code')
+                        code = request.session.get("employee_code")
+                        #compare with code that was sent
+                        if email_code == code:
+                            user = get_user(request.session.get('current_user'))
+                            user.number_2fa = 1
+                            user.save()
+                            is_admin = False
+                            if _Admin.objects.filter(email=user).exists():
+                                is_admin = True
+                            _slog(LogType.USER_ENABLED_MFA, extra_info=[request, user])
+                            return render(request, "artTubeApp/enable_mfa.html", {'form2': form2, 'admin_require': is_admin})
+                        else:
+                            _slog(LogType.USER_FAILED_ENABLE_MFA, extra_info=[request, get_user(request.session.get('current_user'))])
+                            return render(request, "artTubeApp/enable_mfa.html", {'form1': form1, 'failure': 1})
+                elif request.POST.get("action") == "submit-security-questions":
+                    form = account_validate_questionsSetup(request.POST)
+                    if form.is_valid():
+                        question_1 = form.cleaned_data.get('q1')
+                        answer_1 = make_password(form.cleaned_data.get('q_answer1'))
+                        question_2 = form.cleaned_data.get('q2')
+                        answer_2 = make_password(form.cleaned_data.get('q_answer2'))
+
+                        email=request.session.get('current_user')
+                        user = _User.objects.get(email=email)
+                        user.secure_q1 = question_1
+                        user.secure_a1 = answer_1
+                        user.secure_q2 = question_2
+                        user.secure_a2 = answer_2
+                        user.save(update_fields=['secure_q1', 'secure_a1', 'secure_q2', 'secure_a2'])
+                        _slog(LogType.USER_ENABLE_MFA_SECURE_Q, extra_info=[request, get_user(request.session.get('current_user'))])
+                        return render(request, "artTubeApp/enable_mfa.html", {'success': 1})
+                elif request.POST.get("action") == "skip":
+                    if not _Admin.objects.filter(email=request.session.get('current_user')).exists():
+                        return redirect('home')
                     else:
                         _slog(LogType.USER_FAILED_ENABLE_MFA, extra_info=[request, get_user(request.session.get('current_user'))])
-                        return render(request, "artTubeApp/enable_mfa.html", {'form1': form1, 'failure': 1})
-            elif request.POST.get("action") == "submit-security-questions":
-                form = account_validate_questionsSetup(request.POST)
-                if form.is_valid():
-                    question_1 = form.cleaned_data.get('q1')
-                    answer_1 = make_password(form.cleaned_data.get('q_answer1'))
-                    question_2 = form.cleaned_data.get('q2')
-                    answer_2 = make_password(form.cleaned_data.get('q_answer2'))
-
-                    email=request.session.get('current_user')
-                    user = _User.objects.get(email=email)
-                    user.secure_q1 = question_1
-                    user.secure_a1 = answer_1
-                    user.secure_q2 = question_2
-                    user.secure_a2 = answer_2
-                    user.save(update_fields=['secure_q1', 'secure_a1', 'secure_q2', 'secure_a2'])
-                    _slog(LogType.USER_ENABLE_MFA_SECURE_Q, extra_info=[request, get_user(request.session.get('current_user'))])
-                    return render(request, "artTubeApp/enable_mfa.html", {'success': 1})
-            elif request.POST.get("action") == "skip":
-                if not _Admin.objects.filter(email=request.session.get('current_user')).exists():
-                    return redirect('home')
-                else:
-                    _slog(LogType.USER_FAILED_ENABLE_MFA, extra_info=[request, get_user(request.session.get('current_user'))])
-                    return render(request, "artTubeApp/enable_mfa.html", {'form2': form2, 'failure': 1})
-        return render(request, "artTubeApp/enable_mfa.html", {'form1': form1})
+                        return render(request, "artTubeApp/enable_mfa.html", {'form2': form2, 'failure': 1})
+            return render(request, "artTubeApp/enable_mfa.html", {'form1': form1})
+        else:
+            return redirect('login')
     else:
-        return redirect('login')
+        return redirect('gallery')
 
 def change_pwd(request):
-    form1 = account_validate_emailMFA()
-    form2 = account_validate_changePWD()
-    if request.method == 'GET':
-        email = request.session.get('current_user')
-        code = f"{secrets.randbelow(1_000_000):06d}"
-        request.session["employee_code"] = code
-        #send email with code
-        send_mail(
-            "ArtTube Verification code",
-            f"code is {code}",
-            settings.EMAIL_HOST_USER,  # Uses DEFAULT_FROM_EMAIL if configured
-            [email],
-            fail_silently=False,
-        )
-        return render(request, "artTubeApp/change_password.html", {'form1': form1})
-    elif request.method == 'POST':
-        if request.POST.get("action") == "submit-code":
-            form = account_validate_emailMFA(request.POST)
-            if form.is_valid():
-                email_code = form.cleaned_data.get('email_code')
-                code = request.session.get("employee_code")
-                #compare with code that was sent
-                if email_code == code:
-                    return render(request, "artTubeApp/change_password.html", {'form2': form2})
-                else:
-                    return render(request, "artTubeApp/change_password.html", {'form1': form1, 'failure': 1})
-        elif request.POST.get("action") == "submit-new-pwd":
-            form = account_validate_changePWD(request.POST)
-            if form.is_valid():
-                new_pwd = make_password(form.cleaned_data.get('new_pwd'))
-                email=request.session.get('current_user')
-                user = _User.objects.get(email=email)
-                user.password = new_pwd
-                user.save(update_fields=['password'])
-                return render(request, "artTubeApp/change_password.html", {'success': 1})
-            else: #pwd does not match
-                return render(request, "artTubeApp/change_password.html", {'form2': form})
-    return render(request, "artTubeApp/change_password.html", {'form1': form1})
+    if can_enter(request):
+        if request.session.get('current_user'):
+            form1 = account_validate_emailMFA()
+            form2 = account_validate_changePWD()
+            if request.method == 'GET':
+                email = request.session.get('current_user')
+                code = f"{secrets.randbelow(1_000_000):06d}"
+                request.session["employee_code"] = code
+                #send email with code
+                send_mail(
+                    "ArtTube Verification code",
+                    f"code is {code}",
+                    settings.EMAIL_HOST_USER,  # Uses DEFAULT_FROM_EMAIL if configured
+                    [email],
+                    fail_silently=False,
+                )
+                return render(request, "artTubeApp/change_password.html", {'form1': form1})
+            elif request.method == 'POST':
+                if request.POST.get("action") == "submit-code":
+                    form = account_validate_emailMFA(request.POST)
+                    if form.is_valid():
+                        email_code = form.cleaned_data.get('email_code')
+                        code = request.session.get("employee_code")
+                        #compare with code that was sent
+                        if email_code == code:
+                            return render(request, "artTubeApp/change_password.html", {'form2': form2})
+                        else:
+                            return render(request, "artTubeApp/change_password.html", {'form1': form1, 'failure': 1})
+                elif request.POST.get("action") == "submit-new-pwd":
+                    form = account_validate_changePWD(request.POST)
+                    if form.is_valid():
+                        new_pwd = make_password(form.cleaned_data.get('new_pwd'))
+                        email=request.session.get('current_user')
+                        user = _User.objects.get(email=email)
+                        user.password = new_pwd
+                        user.save(update_fields=['password'])
+                        return render(request, "artTubeApp/change_password.html", {'success': 1})
+                    else: #pwd does not match
+                        return render(request, "artTubeApp/change_password.html", {'form2': form})
+            return render(request, "artTubeApp/change_password.html", {'form1': form1})
+        else:
+            return redirect('login')
+    else:
+        return redirect('gallery')
