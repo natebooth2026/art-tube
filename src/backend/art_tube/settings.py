@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 FILE_CRYPT_KEY = os.getenv('FILE_CRYPT_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-if not 'test' in sys.argv:
+if not 'test' in sys.argv or 'runserver' in sys.argv or 'runserver_plus' in sys.argv:
     print("DEBUG disabled!")
     DEBUG = False
 elif 'test' in sys.argv:
